@@ -99,19 +99,12 @@ def generate_automation(
     # Create the command
     password_file = Path(target.remote.password_file).resolve().__str__()
     command = create_rsync_command(
-        target.remote.host,
-        target.remote.port,
-        user=target.remote.user,
-        password_file=password_file,
-        module=target.remote.dest.module,
-        folder=target.remote.dest.folder,
-        list_only=False,
-        progress=target.rsync.show_progress,
-        includes=target.rsync.includes,
-        verbose=target.rsync.verbose,
-        exclude_from=exclude_path,
-        sources=target.rsync.sources,
-        use_flags=True
+        target.remote.host, target.remote.port, user=target.remote.user,
+        password_file=password_file, module=target.remote.dest.module, 
+        folder=target.remote.dest.folder, list_only=False, 
+        progress=target.rsync.show_progress, includes=target.rsync.includes,
+        verbose=target.rsync.verbose, exclude_from=exclude_path, 
+        sources=target.rsync.sources, use_flags=True
     )
     
     configuration_plan["command"] = command
