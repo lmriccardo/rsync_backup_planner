@@ -1,0 +1,137 @@
+# yaml-language-server: $schema=/opt/pybackup/schemas/backup-config.schema.json
+
+backup:
+  # Folder where the excludes file are saved into
+  # [REQUIRED]
+  exclude_output: /path/to/exclude-file
+
+  # Starts of the backup plans (the key is the identifier)
+  targets:
+    full_backup:
+      # Configuration of the remote server
+      # [REQUIRED]
+      remote:
+        # Put the server hostname/IPv4 address here
+        # [REQUIRED]
+        host: host.domain
+
+        # Remote rsync server port. 873 is the default port
+        # [OPTIONAL]
+        port: 1234 
+
+        # The username to connect with 
+        # [OPTIONAL]
+        user: admin
+
+        # The password file for non-interactive mode. It is not
+        # strictly required, since the remote rsync service might
+        # not need the authentication step, however, if a password
+        # is required for the specified username (if any), then it
+        # is advisable to use the password_file otherwise interactive
+        # mode is enabled and automatic backup wont work as expected.
+        # [OPTIONAL, sligthly REQUIRED]
+        password_file: /path/to/password-file
+
+        # Describes the destination of the backup in the form
+        # of <module>/<folder> as required by rsync
+        # [REQUIRED]
+        dest:
+          module: module_name # The module name [REQUIRED]
+          folder: dst_folder # Destination folder under the module [REQUIRED]
+      
+      # RSync Configuration for the backup plan
+      # [REUQUIRED]
+      rsync:
+        # Folder where the expanded excludes are saved into.
+        # Overwrites the global exclude_output variable.
+        # [OPTIONAL]
+        exclude_output_folder: /path/to/exclude/output
+
+        # Enable or disable compression before transmitting
+        # [CAN BE OMITTED]
+        compress: true # or false
+
+        # Base file with a bunch of paths to exclude
+        # [CAN BE OMITTED]
+        exclude_from: /path/to/base-exclude-file
+
+        # Put additional folders/files here (absolute path)
+        # [IS A LIST OF PATHS, CAN BE OMITTED]
+        excludes:
+          - /prova-exclude/*
+        # - additional paths here
+        
+        # Includes removes paths from the exclusion if they exists.
+        # It can be useful in case one would like to have a general
+        # excludes starting file and then simply modify the base file
+        # to generate the final exclude plan file.
+        # If specific files/folders do not exists they are appended
+        # to the rsync command in the "source" part
+        # 
+        # [IS A LIST OF PATHS, CAN BE OMITTED]
+        includes:
+          - /prova-includes/*
+        # - additional paths here
+
+        # The sources to copy into the remote
+        # [IT IS A LIST OF PATHS, REQUIRED]
+        sources:
+          - '/path/to/source-folder-1'
+          - '/path/to/source-folder-2'
+        # - additional paths here
+
+        # Shows the progress
+        # [CAN BE OMITTED]
+        show_progres: true # or false
+
+        # Enable/Disable verbosity
+        # [CAN BE OMITTED]
+        verbose: true # or false
+
+      # Describes the backup frequency as a cronjob.
+      # null are converted into * wildcards
+      # Setting every field to null means * * * * * in cron string
+      # [REQUIRED]
+      schedule:
+        weekday: null # Range 0-7 (Sun = 0 or 7)
+        month: null # Range 1-12
+        day: null # Day of the month Range 1-31
+        hour: null # Range 0-23
+        minute: null # Range 0-59
+
+      # Sets the notification system, i.e., the way in which the user 
+      # is notified about the backup. Up to now, only the email system 
+      # is active. All notification systems are used at once.
+      # [OPTIONAL]
+      notification:
+        # Using the email notification system. If the SMTP can be inferred
+        # from the email domain than the SMTP section is not required,
+        # otherwise it is required and if not present an error occurs.
+        # Currently known domains are: gmail, outlook, yahoo and icloud
+        # [OPTIONAL]
+        email:
+          # The email of the sender
+          # [REQUIRED]
+          from: user.email@domain.com
+          # A list of recipients for the notification email.
+          # [REQUIRED AT LEAST 1]
+          to:
+            - dstuser.email@domain.com
+          # - additional recipients here
+
+          # The account password used to authentication to the SMTP server
+          # [REQUIRED]
+          password: account_password_here
+
+          # SMTP configuration if a custom email server is provided
+          # or an uknown domain is detected
+          # [OPTIONAL]
+          smtp:
+            server: host.domain # The SMTP server host [REQUIRED]
+            port: 1234 # The SMTP Server remote port [REQUIRED]
+
+            # Tell if the SMTP server has SSL enabled or not. Notice that
+            # the server must at least has TLS enabled otherwise this
+            # method of notification will be ignored
+            # [OPTIONAL, default=False]
+            ssl: false # or true
