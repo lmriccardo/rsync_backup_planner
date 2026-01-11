@@ -3,36 +3,15 @@ from __future__ import annotations
 import croniter
 import yaml
 
-from enum import Enum
-from typing import Optional, List, Union, Dict
+from backupctl.constants import SMTP_PROVIDERS
+from backupctl.models.rsync import DeleteType
 from pathlib import Path
+from typing import Optional, List, Union, Dict
 from pydantic import (
     BaseModel, Field, ConfigDict, EmailStr,
     field_validator, model_validator,
     ValidationError
 )
-
-SMTP_PROVIDERS = {
-    "gmail.com":  ("smtp.gmail.com", 587, False),
-    "outlook.com": ("smtp.office365.com", 587, False),
-    "yahoo.com":  ("smtp.mail.yahoo.com", 465, True),
-    "icloud.com": ("smtp.mail.me.com", 587, False),
-}
-
-class CaseInsensitiveEnum(str, Enum):
-    @classmethod
-    def _missing_(cls, value):
-        if not isinstance(value, str): return None
-        for member in cls:
-            if member.value.lower() == value.lower():
-                return member
-
-class DeleteType(CaseInsensitiveEnum):
-    delete_after    = "after"
-    delete_before   = "before"
-    delete_delay    = "delay"
-    delete_during   = "during"
-    delete_excluded = "excluded"
 
 CronField = Optional[Union[int,str]]
 
@@ -134,13 +113,23 @@ class EmailCfg(BaseModel):
         return self
 
 class NotificationCfg(BaseModel):
-    email: Optional[EmailCfg] = None # Optional email notification syste
+    email: Optional[EmailCfg] = None # Optional email notification system
 
 class Target(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
     remote: Remote # The remote rsync host
     rsync: RsyncCfg # rsync configuration
     schedule: Schedule # Schedule configuration
     notification: Optional[NotificationCfg]=None # The optional notification system
+
+class NamedTarget(Target):
+    """ Just a wrapper around target that also includes the name """
+    name: str
+
+    @classmethod
+    def from_target(cls, name: str, target: Target) -> 'NamedTarget':
+        return cls.model_construct( **target.__dict__, name=name )
 
 class BackupCfg(BaseModel):
     exclude_output: Optional[str] = None
@@ -152,7 +141,7 @@ class YAML_Conf(BaseModel):
 
 ROOT_SCHEMA_CLASS = YAML_Conf # For Schema generation
 
-def load_configuration( conf_path: Path | str ) -> YAML_Conf:
+def load_user_configuration( conf_path: Path | str ) -> YAML_Conf:
     """ Load and validate the input configuration """
     if isinstance(conf_path, str):
         conf_path = Path(conf_path).absolute()

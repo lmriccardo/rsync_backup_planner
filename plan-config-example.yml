@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=/opt/pybackup/schemas/backup-config.schema.json
+# yaml-language-server: $schema=./schemas/backup-config.schema.json
 
 backup:
   # Folder where the excludes file are saved into
