@@ -92,6 +92,14 @@ def check_user_create_in_dir( path: Path ) -> None:
     the input folder or file the user would like to create/excute/read
     """
     path = path.resolve()
+
+    print(f"Checking for {path}")
+    
+    # Here we should also check that the parent folder exists
+    # otherwise we need to recurse with the parent input
+    if not path.parent.exists():
+        return check_user_create_in_dir( path.parent )
+
     if not os.access(path.parent, os.W_OK | os.X_OK):
         print_permission_error( path, with_parent=True )
         raise PermissionError("Permission error")
@@ -99,6 +107,11 @@ def check_user_create_in_dir( path: Path ) -> None:
 def check_user_can_read_in_dir( path: Path ) -> None:
     """ Check if the current user has read permissions on the folder/file """
     path = path.resolve()
+    # Here we should also check that the parent folder exists
+    # otherwise we need to recurse with the parent input
+    if not path.parent.exists():
+        return check_user_create_in_dir( path.parent )
+
     if not os.access(path.parent, os.R_OK):
         print_permission_error( path )
         raise PermissionError("Permission error")
@@ -137,7 +150,7 @@ def create_rsync_command(
     password_file: Optional[str] = None,
     list_only: bool = True,
     dry_run: bool = False,
-    delete: bool = False,
+    delete: Optional[DeleteType] = None,
     progress: bool = False,
     prune_empty_dirs: bool = True,
     exclude_from: Optional[str] = None,
@@ -145,6 +158,7 @@ def create_rsync_command(
     includes: List[str] = [],
     numeric_ids: bool=True,
     use_flags: bool=False,
+    itemize_changes: bool=False,
     module: Optional[str] = None,
     folder: Optional[str] = None,
     sources: List[str] = [],
@@ -159,7 +173,7 @@ def create_rsync_command(
     if list_only: command += ["--list-only"]
     if password_file: command += [f"--password-file={password_file}"]
     if dry_run: command += ["--dry-run"]
-    if delete: command += ["--delete"]
+    if delete: command += ["--delete"] + [ f"--delete-{delete.value}" ]
     if progress: command += ["--info=progress2"]
     if prune_empty_dirs: command += ["--prune-empty-dirs"]
     if len(includes) > 0:
@@ -172,6 +186,7 @@ def create_rsync_command(
 
     if exclude_from: command += [f"--exclude-from={exclude_from}"]
     if numeric_ids: command += ["--numeric-ids"]
+    if itemize_changes: command += ["--itemize-changes"]
 
     # Add the sources
     if sources: command.extend(sources)

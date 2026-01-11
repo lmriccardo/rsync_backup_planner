@@ -47,10 +47,6 @@ backup:
         # [OPTIONAL]
         exclude_output_folder: /path/to/exclude/output
 
-        # Enable or disable compression before transmitting
-        # [CAN BE OMITTED]
-        compress: true # or false
-
         # Base file with a bunch of paths to exclude
         # [CAN BE OMITTED]
         exclude_from: /path/to/base-exclude-file
@@ -80,13 +76,30 @@ backup:
           - '/path/to/source-folder-2'
         # - additional paths here
 
-        # Shows the progress
-        # [CAN BE OMITTED]
-        show_progres: true # or false
+        # Additional options to pass to the rsync command
+        # [OPTIONAL]
+        options:
+          # Enable/Disable verbosity
+          # [CAN BE OMITTED]
+          verbose: true # or false
 
-        # Enable/Disable verbosity
-        # [CAN BE OMITTED]
-        verbose: true # or false
+          # Shows the progress
+          # [CAN BE OMITTED]
+          show_progres: true # or false
+
+          # Enable or disable compression before transmitting
+          # [CAN BE OMITTED]
+          compress: true # or false
+
+          # Enable/Disable delete mode. In the case it is enabled
+          # a mode must be provided, different modes are: 
+          # before, after, during, delay and finally excluded
+          # [OPTIONAL, default=delete-after]
+          delete: after
+
+          # Output a change-summary for all updates
+          # [OPTIONAL, default=false]
+          itemize_changes: true # or false
 
       # Describes the backup frequency as a cronjob.
       # null are converted into * wildcards

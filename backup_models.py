@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import croniter
 import yaml
-import re
 
+from enum import Enum
 from typing import Optional, List, Union, Dict
 from pathlib import Path
 from pydantic import (
@@ -19,6 +19,21 @@ SMTP_PROVIDERS = {
     "icloud.com": ("smtp.mail.me.com", 587, False),
 }
 
+class CaseInsensitiveEnum(str, Enum):
+    @classmethod
+    def _missing_(cls, value):
+        if not isinstance(value, str): return None
+        for member in cls:
+            if member.value.lower() == value.lower():
+                return member
+
+class DeleteType(CaseInsensitiveEnum):
+    delete_after    = "after"
+    delete_before   = "before"
+    delete_delay    = "delay"
+    delete_during   = "during"
+    delete_excluded = "excluded"
+
 CronField = Optional[Union[int,str]]
 
 class RemoteDest(BaseModel):
@@ -32,15 +47,28 @@ class Remote(BaseModel):
     password_file: Optional[str] = None # The password file for non-interactive mode
     dest: RemoteDest # Remote Destination
 
-class RsyncCfg(BaseModel):
-    exclude_output_folder: Optional[str] = None
+class RsyncOptions(BaseModel):
     compress: bool = False # Enable or disable compression before transmitting
     verbose: bool = True # Enable/Disable verbosity
     show_progress: bool = True # Show progress while synching
+    itemize_changes: bool = False # Show change-summary on all updates
+    delete: Optional[DeleteType] = None # Delete mode
+
+class RsyncCfg(BaseModel):
+    model_config = ConfigDict(extra="forbid", validate_default=True)
+
+    exclude_output_folder: Optional[str] = None
     exclude_from: Optional[str] = None
     excludes: List[str] = Field(default_factory=list)
     includes: List[str] = Field(default_factory=list)
     sources: List[str] = Field(default_factory=list, min_length=1)
+    options: Optional[RsyncOptions] = None
+
+    @model_validator(mode="after")
+    def default_options(self) -> 'RsyncCfg':
+        if self.options is not None: return self
+        self.options = RsyncOptions()
+        return self
 
 class Schedule(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_default=True)
@@ -64,14 +92,17 @@ class Schedule(BaseModel):
     @model_validator(mode="after")
     def validate_as_cron(self) -> 'Schedule':
         """ Validates the model as a cronstring """
-        expr = f"{self.minute} {self.hour} {self.day} {self.month} {self.weekday}"
-        
+        cron_expr = self.to_cron()
         try:
-            croniter.croniter(expr) # This raises if invalid
+            croniter.croniter(cron_expr) # This raises if invalid
         except Exception as e:
-            raise ValueError(f"Invalid schedule format; cron='{expr}: {e}'")
+            raise ValueError(f"Invalid schedule format; cron='{cron_expr}: {e}'")
 
         return self
+    
+    def to_cron(self) -> str:
+        """ Returns crons representation of the schedule """
+        return f"{self.minute} {self.hour} {self.day} {self.month} {self.weekday}"
     
 class SMTP_Cfg(BaseModel):
     server: str

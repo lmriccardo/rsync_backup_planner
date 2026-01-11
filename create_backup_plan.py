@@ -1,10 +1,53 @@
 import sys
 import argparse
 import json
+import shlex
 
 from pathlib import Path
+from typing import Tuple
 from backup_checks import *
 from constants import *
+
+CronMatchFn = Callable[[str],bool]
+
+class JobStatusType(str, Enum):
+    enabled  = "ENABLED"
+    disabled = "DISABLED"
+
+    @staticmethod
+    def fromstr( t: str ) -> 'JobStatusType':
+        if not isinstance(t, str):
+            raise TypeError("status must be a string")
+        
+        match t.strip().upper():
+            case JobStatusType.enabled.value:
+                return JobStatusType.enabled
+            case JobStatusType.disabled.value:
+                return JobStatusType.disabled
+            case _:
+                raise ValueError(f"invalid job status: {t}")
+
+@dataclass
+class Job:
+    name   : str            # The name of the Job
+    cmd    : str            # The cronjob command (including the time schedule)
+    status : JobStatusType  # The Job status ( enabled/disabled )
+
+    def is_enabled(self) -> bool:
+        return self.status == JobStatusType.enabled
+    
+    def tag(self) -> str:
+        """ Returns the TAG to identify this job """
+        return f"{CRONTAB_TAG_PREFIX}{self.name}"
+    
+    def to_cron(self, with_tag: bool=False) -> str:
+        """ Returns the cron line with the tag suffix if required """
+        suffix = "" if not with_tag else self.tag()
+        prefix = "" if self.is_enabled() else "# "
+        return f"{prefix}{self.cmd} {suffix}"
+    
+    def __str__(self) -> str:
+        return f"{self.name} {self.cmd} {self.status.value}"
 
 @assertion_wrapper
 def parse_input_arguments() -> Args:
@@ -82,6 +125,124 @@ def generate_exclude_file( exclude_out_folder: str | None, target_name: str, rsy
     except PermissionError as _:
         assert_1(False, "Permission Error")
 
+def get_all_user_plans() -> List[str]:
+    """ Retrieves as list of all user plans """
+    user_plans = []
+    for subpath in DEFAULT_PLAN_CONF_FOLDER.iterdir():
+        *_, json_conf_file = subpath.parts
+        if not json_conf_file.endswith(".json"): continue
+        user_plans.append( json_conf_file.removesuffix(DEFAULT_PLAN_SUFFIX) )
+    return user_plans
+
+def get_all_registered_jobs() -> Dict[str,Job]:
+    """ Returns all registered jobs """
+    if not REGISTERED_JOBS_FILE.exists(): 
+        REGISTERED_JOBS_FILE.touch()
+        return dict()
+
+    with REGISTERED_JOBS_FILE.open('r', encoding='utf-8') as io:
+        registered_jobs = defaultdict(Job)
+        while (line := io.readline()):
+            name, *cmd, status = line.strip().removesuffix("\n").split()
+            registered_jobs[name] = Job(name, " ".join(cmd), 
+                JobStatusType.fromstr(status))
+        
+        return registered_jobs
+
+def get_crontab_list() -> List[str]:
+    """ Returns the list of all jobs actually registered on crontab """
+    cronout = subprocess.run(["crontab", "-l"], capture_output=True, text=True, check=False)
+    ok = cronout.returncode == 0 or ( cronout.returncode == 1 and len(cronout.stdout) == 0 )
+    assert_1( ok, f"[ERROR] (crontab -l) error: {cronout.stderr}" )
+    return cronout.stdout.splitlines()
+
+def insert_cron_command( cronlist: List[str], line: str, repl_match_fn: CronMatchFn ) -> None:
+    """ Removes from the cronlist the line matching the input one.
+    repl_match is a function that takes as input the current cron line 
+    and returns whether or not that line shalle be replaced. If the
+    match is found than the line is replaced otherwise it is appended. """
+    # Removes all matches to handle unwanted duplicates
+    first_idx = None
+    current_idx = 0
+
+    while current_idx < len(cronlist):
+        if repl_match_fn(cronlist[current_idx]):
+            if first_idx is None: first_idx = current_idx
+            cronlist.pop(current_idx)
+            continue
+
+        current_idx += 1
+
+    # Insert the input line where it is supposed to be.
+    if first_idx is None: first_idx = len(cronlist)
+    cronlist.insert( first_idx, line )
+
+def write_to_cron( input_: str | List[str] ) -> None:
+    """ Write the crontab from input """
+    if isinstance(input_, list): input_ = "\n".join(input_)
+    input_ = input_.rstrip("\n") + "\n"
+    out = subprocess.run(["crontab", "-"], input=input_, capture_output=True, text=True, check=False)
+    assert_1( out.returncode == 0, f"[ERROR] (crontab -) error: {out.stderr}" )
+
+def make_job_consistent( job: Job, cronout: Optional[List[str]] = None ) -> None:
+    """ Makes the crontab entry releated to a job consistent with the registry """
+    wanted_cmd = job.to_cron(with_tag=True)
+
+    # Get the cron output if not passed as input
+    if cronout is None: cronout = get_crontab_list()
+
+    def cron_match_line( cronline: str ) -> bool:
+        return job.tag() in cronline
+
+    # Check for the line with the backupctl tag
+    insert_cron_command( cronout, wanted_cmd, cron_match_line )
+
+    # Write it into cron
+    write_to_cron(cronout)
+
+def write_to_registry( registry: Dict[str, Job] ) -> None:
+    """ Overwrite the entire registry with the one in input """
+    # Create the registry file if it does not exists
+    try:
+        if not REGISTERED_JOBS_FILE.exists(): REGISTERED_JOBS_FILE.touch()
+        content = "\n".join( map(str, registry.values()) )
+        REGISTERED_JOBS_FILE.write_text( content, encoding='utf-8' )
+    except Exception as e:
+        assert_1(False, f"[ERROR] Registry writing: {e}")
+
+def create_cronjob( name: str, backup_conf_path: Path, schedule: Schedule, args: Args ) -> None:
+    """ Registers a new cronjobs if it does not exists yet """
+    # Format the correct cron command
+    plan_arg = shlex.quote(str(backup_conf_path))
+    cron_command = f"{schedule.to_cron()} {BACKUPCTL_RUN_COMMAND} run {plan_arg}"
+
+    registered = get_all_registered_jobs() # Get all registered jobs
+    curr_crontab_list = get_crontab_list() # Read the current crontab. Empty is OK
+
+    current_job = Job( name, cron_command, JobStatusType.enabled )
+
+    if name in registered:
+        current_job = registered[name]
+        if args.verbose:
+            print(f"[*] Automation Task {name} already registered")
+            print(f"    Registry Command: {cron_command}")
+            print(f"    Registry Status : {current_job.status.value}")
+            print(f"\n[*] Checking consistency with the crontab list")
+    else:
+        if args.verbose:
+            print(f"[*] Registering for {name}")
+            print(f"    Command: {cron_command}")
+
+    make_job_consistent(current_job, curr_crontab_list)
+    registered[name] = current_job
+    write_to_registry( registered )
+
+def create_automation_task( name: str, backup_conf_path: Path, schedule: Schedule, args: Args ) -> None:
+    """ Creates the automation task. In Linux it will install a new cronjob. """
+    print("[*] Installing the automation task")
+    if sys.platform == "linux":
+        create_cronjob( name, backup_conf_path, schedule, args )
+
 def generate_automation( 
     exclude_path: Path, 
     notitication_errors: Dict[str,str],
@@ -94,7 +255,7 @@ def generate_automation(
     configuration_plan = dict()
     configuration_plan["name"] = target_name
     configuration_plan["log"] = (DEFAULT_LOG_FOLDER / target_name).__str__()
-    configuration_plan["compression"] = target.rsync.compress
+    configuration_plan["compression"] = target.rsync.options.compress
 
     # Create the command
     password_file = Path(target.remote.password_file).resolve().__str__()
@@ -102,9 +263,11 @@ def generate_automation(
         target.remote.host, target.remote.port, user=target.remote.user,
         password_file=password_file, module=target.remote.dest.module, 
         folder=target.remote.dest.folder, list_only=False, 
-        progress=target.rsync.show_progress, includes=target.rsync.includes,
-        verbose=target.rsync.verbose, exclude_from=exclude_path, 
-        sources=target.rsync.sources, use_flags=True
+        progress=target.rsync.options.show_progress, includes=target.rsync.includes,
+        verbose=target.rsync.options.verbose, exclude_from=exclude_path, 
+        sources=target.rsync.sources, use_flags=True,
+        delete=target.rsync.options.delete, 
+        itemize_changes=target.rsync.options.itemize_changes
     )
     
     configuration_plan["command"] = command
@@ -133,7 +296,7 @@ def generate_automation(
     
     # Save the JSON configuration into the default folder
     DEFAULT_PLAN_CONF_FOLDER.mkdir(parents=True, exist_ok=True)
-    plan_conf_path = DEFAULT_PLAN_CONF_FOLDER / f"{target_name}-plan.json"
+    plan_conf_path = DEFAULT_PLAN_CONF_FOLDER / f"{target_name}{DEFAULT_PLAN_SUFFIX}"
     plan_conf_path.touch(exist_ok=True)
 
     if args.verbose:
@@ -144,6 +307,9 @@ def generate_automation(
     print(f"[*] Saving configuration plan into {plan_conf_path}")
     with plan_conf_path.open(mode='w', encoding='utf-8') as io:
         json.dump( configuration_plan, io, indent=2 )
+
+    # Finally, creates the automation task
+    create_automation_task( target_name, plan_conf_path, target.schedule, args )
 
 @assertion_wrapper
 def consume_backup_target( name: str, target: Target, args: Args ) -> bool:
@@ -162,6 +328,7 @@ def consume_backup_target( name: str, target: Target, args: Args ) -> bool:
     if args.verbose: print()
     print("[*] Preprocessing excludes and includes path")
     preprocess_excludes_includes( target.rsync )
+
     exclude_path = generate_exclude_file( target.rsync.exclude_output_folder, name, target.rsync )
 
     # Finally, generate the cronjob

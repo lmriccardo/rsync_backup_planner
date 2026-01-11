@@ -33,6 +33,17 @@
       "title": "BackupCfg",
       "type": "object"
     },
+    "DeleteType": {
+      "enum": [
+        "after",
+        "before",
+        "delay",
+        "during",
+        "excluded"
+      ],
+      "title": "DeleteType",
+      "type": "string"
+    },
     "EmailCfg": {
       "additionalProperties": false,
       "properties": {
@@ -157,6 +168,7 @@
       "type": "object"
     },
     "RsyncCfg": {
+      "additionalProperties": false,
       "properties": {
         "exclude_output_folder": {
           "anyOf": [
@@ -169,21 +181,6 @@
           ],
           "default": null,
           "title": "Exclude Output Folder"
-        },
-        "compress": {
-          "default": false,
-          "title": "Compress",
-          "type": "boolean"
-        },
-        "verbose": {
-          "default": true,
-          "title": "Verbose",
-          "type": "boolean"
-        },
-        "show_progress": {
-          "default": true,
-          "title": "Show Progress",
-          "type": "boolean"
         },
         "exclude_from": {
           "anyOf": [
@@ -218,9 +215,57 @@
           "minItems": 1,
           "title": "Sources",
           "type": "array"
+        },
+        "options": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RsyncOptions"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "title": "RsyncCfg",
+      "type": "object"
+    },
+    "RsyncOptions": {
+      "properties": {
+        "compress": {
+          "default": false,
+          "title": "Compress",
+          "type": "boolean"
+        },
+        "verbose": {
+          "default": true,
+          "title": "Verbose",
+          "type": "boolean"
+        },
+        "show_progress": {
+          "default": true,
+          "title": "Show Progress",
+          "type": "boolean"
+        },
+        "itemize_changes": {
+          "default": false,
+          "title": "Itemize Changes",
+          "type": "boolean"
+        },
+        "delete": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DeleteType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "RsyncOptions",
       "type": "object"
     },
     "SMTP_Cfg": {
