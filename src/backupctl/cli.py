@@ -2,22 +2,19 @@ import argparse
 import backupctl.register.cmd as register
 import backupctl.status.cmd as status
 import backupctl.validate.cmd as validate
+import backupctl.remove.cmd as remove
+import backupctl.enable_disable.cmd as enable_disable
+import backupctl.run.cmd as run
 
 def main():
-    parser = argparse.ArgumentParser(prog="backupctl")
+    parser = argparse.ArgumentParser(prog="backupctl", description="Backup control and consistency tool")
     sub = parser.add_subparsers(required=True)
     
     # Create the: backupctl register COMMAND
     p_plan = sub.add_parser("register", help="Create and register a new backup plan")
     p_plan.set_defaults(func=register.run)
     p_plan.add_argument("config", help="Backup Plan configuration file")
-    p_plan.add_argument(
-        "-v", "--verbose", 
-        help="Enable/Disable Verbosity", 
-        required=False, 
-        default=False, 
-        action="store_true"
-    )
+    p_plan.add_argument("-v", "--verbose", help="Enable/Disable Verbosity", default=False, action="store_true")
 
     # Create the: backupctl validate COMMAND
     p_validate = sub.add_parser("validate", help="Validate a user configuration")
@@ -27,22 +24,34 @@ def main():
     # Create the: backupctl status COMMAND
     p_check = sub.add_parser("status", help="High-level health check")
     p_check.set_defaults(func=status.run)
-    p_check.add_argument(
-        "--apply", 
-        help="Automatically solve errors", 
-        action="store_true", 
-        default=False
-    )
+    p_check.add_argument("--apply-fix", help="Automatically solve errors", action="store_true", default=False)
 
     # Create the: backupctl remove COMMAND
+    p_remove = sub.add_parser("remove", help="Remove all or a list of specified jobs")
+    p_remove.set_defaults(func=remove.run)
+    p_remove.add_argument("--target", nargs="+", help="List of target jobs to remove")
 
     # Create the: backupctl enable COMMAND
+    p_enable = sub.add_parser("enable", help="Enable all or a list of specified jobs")
+    p_enable.set_defaults(func=enable_disable.run_enable)
+    p_enable.add_argument("--target", nargs="+", help="List of target jobs to enable")
 
     # Create the: backupctl disable COMMAND
-
-    # Create the: backupctl list
+    p_disable = sub.add_parser("disable", help="Disable all or a list of specified jobs")
+    p_disable.set_defaults(func=enable_disable.run_disable)
+    p_disable.add_argument("--target", nargs="+", help="List of target jobs to disable")
 
     # Create the: backupctl run COMMAND
+    p_run = sub.add_parser("run", help="Run a specified job")
+    p_run.set_defaults(func=run.run)
+    p_run.add_argument("target", help="The job to run", type=str)
+    p_run.add_argument("--notify", help="Enable notifications", action="store_true", default=False)
+    p_run.add_argument("--log", help="Enable file logging", action="store_true", default=False)
+    p_run.add_argument(
+        "--dry-run", help="Run rsync command in dry-run mode", 
+        action="store_true", default=False)
+
+    # Create the: backupctl list
 
     args = parser.parse_args()
     args.func(args)

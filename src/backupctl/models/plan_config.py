@@ -1,16 +1,14 @@
+from __future__ import annotations
+
 import backupctl.models.user_config as user_cfg
 import json
 
 from backupctl.constants import DEFAULT_LOG_FOLDER
 from backupctl.utils.rsync import create_rsync_command
-from dataclasses import dataclass, field, asdict
+from backupctl.utils.dataclass import *
+from dataclasses import dataclass, field
 from typing import List, TypeAlias, Union, Dict, Any
 from pathlib import Path
-from enum import Enum
-
-class DictConfiguration:
-    def asdict(self) -> Dict[str,Any]:
-        return asdict(self)
 
 class NotificationType(str, Enum):
     email   = "email"
@@ -22,7 +20,7 @@ class NotificationMeta:
     type : NotificationType # The type of the current notification system
 
 @dataclass
-class EmailNotification(NotificationMeta, DictConfiguration):
+class EmailNotification(NotificationMeta, DictConfiguration, PrintableConfiguration):
     from_    : str # The email sender
     password : str # The user password
     server   : str # The server hostname or ip address
@@ -41,7 +39,7 @@ class EmailNotification(NotificationMeta, DictConfiguration):
         )
 
 @dataclass
-class WebhookNotification(NotificationMeta):
+class WebhookNotification(NotificationMeta, DictConfiguration, PrintableConfiguration):
     ...
 
 NotificationCls: TypeAlias = Union[
@@ -50,15 +48,30 @@ NotificationCls: TypeAlias = Union[
 ]
 
 @dataclass
-class PlanCfg(DictConfiguration):
+class PlanCfg(DictConfiguration, PrintableConfiguration):
     name         : str # The name of the backup plan
     log          : str # The root log folder for this job
     compression  : bool # Enable/Disable compression
     command      : str # rsync command to run
     notification : List[NotificationCls] = \
         field(default_factory=list) # Notification system config
+    
+TYPE_DISCRIMINATOR: Dict[str, Any] = \
+{
+    "email"   : EmailNotification,
+    "webhook" : WebhookNotification
+}
 
-def load_plan_configuration( conf_path: Path | str ) -> PlanCfg: ...
+def load_plan_configuration( conf_path: Path | str ) -> PlanCfg:
+    """ Load the json file into the `PlanCfg` dataclass """
+    conf_path = conf_path.expanduser().resolve()
+    if not conf_path.exists() or not conf_path.is_file():
+        raise ValueError(f"File {conf_path} does not exists or is not a file")
+    
+    with conf_path.open('r', encoding='utf-8') as io:
+        data = json.load(io)
+
+    return dataclass_from_dict( PlanCfg, data, TYPE_DISCRIMINATOR )
 
 def load_from_target( target: user_cfg.Target ) -> PlanCfg:
     """ Creats a plan configuration out of a target. Notification

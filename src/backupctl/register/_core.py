@@ -90,8 +90,7 @@ def generate_exclude_file( exclude_out_folder: str | None, target_name: str, rsy
 def create_cronjob( name: str, backup_conf_path: Path, schedule: Schedule, args: Args ) -> None:
     """ Registers a new cronjobs if it does not exists yet """
     # Format the correct cron command
-    plan_arg = shlex.quote(str(backup_conf_path))
-    cron_command = f"{schedule.to_cron()} {BACKUPCTL_RUN_COMMAND} run {plan_arg}"
+    cron_command = f"{schedule.to_cron()} {BACKUPCTL_RUN_COMMAND} run --log --notify {name}"
 
     registered = load_registry( REGISTERED_JOBS_FILE ) # Get all registered jobs
     curr_crontab_list = get_crontab_list() # Read the current crontab. Empty is OK
@@ -157,6 +156,10 @@ def consume_backup_target( name: str, target: Target, args: Args ) -> bool:
 
     exclude_path = generate_exclude_file( target.rsync.exclude_output_folder, name, target.rsync )
     target.rsync.exclude_from = str(exclude_path.expanduser().resolve())
+
+    # Create the log folder if it does not exists
+    log_folder = DEFAULT_LOG_FOLDER / target.name
+    log_folder.mkdir(exist_ok=True, parents=True)
 
     # Finally, generate the cronjob
     generate_automation( target, args )

@@ -29,13 +29,20 @@ Notice that this kind of installation is recommended but not required. You can i
 ```
 $ backupctl -h
 
-usage: backupctl [-h] {register,validate,check} ...
+usage: backupctl [-h] {register,validate,status,
+                       remove,enable,disable,run} ...
+
+Backup control and consistency tool
 
 positional arguments:
-  {register,validate,check}
+  {register,validate,status,remove,enable,disable,run}
     register            Create and register a new backup plan
     validate            Validate a user configuration
-    check               Check system state for problems
+    status              High-level health check
+    remove              Remove all or a list of specified jobs
+    enable              Enable all or a list of specified jobs
+    disable             Disable all or a list of specified jobs
+    run                 Run a specified job
 
 options:
   -h, --help            show this help message and exit
@@ -104,7 +111,7 @@ It will prints out some logs (with active verbosity) and on successful targets a
 It is possible to give it a try using the `backupctl run` command.
 
 ```
-$ backupctl run ~/.backups/plans/simple_backup-plan.json
+$ backupctl run --log --notify simple_backup
 ```
 
 > This is actual command that either cron or systemd will run

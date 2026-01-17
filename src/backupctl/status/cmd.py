@@ -40,15 +40,17 @@ def run( args: argparse.Namespace ) -> None:
             "      belonging to the registry will be wiped out.\n"
         )
 
-        if not args.apply:
+        if not args.apply_fix:
             user_in = input("Would You like to solve errors? [Y/N, BLANK=YES] ")
             if user_in != "" and user_in.upper() == "N": return
 
         make_registry_consistent( registry )
+        return 0
 
     except KeyboardInterrupt:
         print("\n[*] CTRL+C - Exiting")
-        return
+        return 0
 
     except Exception as e:
         print(f"[ERROR] {e}")
+        return 1

@@ -23,6 +23,9 @@ class JobStatusType(str, Enum):
                 return JobStatusType.disabled
             case _:
                 raise ValueError(f"invalid job status: {t}")
+            
+    def __str__(self) -> str:
+        return self.value
 
 @dataclass
 class Job:
