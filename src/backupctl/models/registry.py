@@ -1,5 +1,7 @@
-from backupctl.constants import CRONTAB_TAG_PREFIX
-from typing import Dict
+from backupctl.constants import CRONTAB_TAG_PREFIX, \
+    REGISTERED_JOBS_FILE
+
+from typing import Dict, TypeAlias
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -44,8 +46,9 @@ class Job:
     def __str__(self) -> str:
         return f"{self.name} {self.cmd} {self.status.value}"
     
+Registry: TypeAlias = Dict[str, Job] | None
 
-def load_registry( path: Path ) -> Dict[str,Job]:
+def load_registry( path: Path ) -> Registry:
     """ Load all registered jobs from the input path """
     # If the path does not exists, create it and returns empty dict
     if not path.expanduser().exists():
@@ -56,12 +59,12 @@ def load_registry( path: Path ) -> Dict[str,Job]:
         registered_jobs = defaultdict(Job)
         while (line := io.readline()):
             name, *cmd, status = line.strip().removesuffix("\n").split()
-            registered_jobs[name] = Job(name, " ".join(cmd), 
+            registered_jobs[name] = Job(name, (" ".join(cmd)).strip(), 
                 JobStatusType.fromstr(status))
         
         return registered_jobs
     
-def write_registry( path: Path, registry: Dict[str, Job] ) -> None:
+def write_registry( path: Path, registry: Registry ) -> None:
     """ Write the registry into the input path """
     from backupctl.utils.exceptions import assert_1
     try:
@@ -71,3 +74,12 @@ def write_registry( path: Path, registry: Dict[str, Job] ) -> None:
         path.write_text( content, encoding='utf-8' )
     except Exception as e:
         assert_1(False, f"[ERROR] Registry writing: {e}")
+
+def read_registry() -> Registry:
+    """ Load the registry or returns None if the
+    registry file does not exists. """
+    if not REGISTERED_JOBS_FILE.exists():
+        return None
+
+    registry = load_registry( REGISTERED_JOBS_FILE )
+    return None if len(registry) == 0 else registry

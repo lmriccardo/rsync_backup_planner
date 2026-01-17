@@ -1,3 +1,4 @@
+import backupctl.models.user_config as user_cfg
 import socket
 import os
 
@@ -231,3 +232,36 @@ def check_notification_system( notification: NotificationCfg, args: Args ) -> No
             errors.items() ) )
         
         print(error_msg)
+
+def validate_target( target: user_cfg.NamedTarget, args: Args ) -> None:
+    """ Validates a single target against some checks """
+    # Checking if remote destination is reachable
+    check_remote_dest( target.remote, args )
+    assert_1(check_exclude_file( target.rsync, args ),
+        f"Exclude file {target.rsync.exclude_from}, does not exists")
+    
+    check_rsync_source_folders( target.rsync, args )
+    check_notification_system( target.notification, args )
+
+def validate_configuration( config: user_cfg.YAML_Conf ) -> int:
+    """ Validates all targets in the user provided configuration """
+    # If there are no targets, skip
+    if not config.backup.targets:
+        print("No Targets to be validated")
+        return
+    
+    args = Args(None, False) # Some additional arguments
+    exit_code = 0
+
+    for target_name, target in config.backup.targets.items():
+        try:
+            print(f"- (  ) Validating Target {target_name}", end="", flush=True)
+            target_with_name = user_cfg.NamedTarget.from_target(target_name, target)
+            validate_target( target_with_name, args )
+            print(f"\r- (OK) Validation completed for Target {target_name}")
+        except AssertionError as e:
+            print(f"\r- (NO) Validation completed for Target {target_name}")
+            print(f"[ERROR] {e}")
+            exit_code = 1
+    
+    return exit_code

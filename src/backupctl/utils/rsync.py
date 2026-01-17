@@ -1,10 +1,6 @@
 import subprocess
 from typing import List, Optional, Any, Mapping, overload
 from backupctl.models.rsync import *
-from backupctl.models.user_config import RsyncCfg
-from backupctl.constants import DEFAULT_EXCLUDE_FOLDER
-from backupctl.utils.exceptions import assert_1
-
 
 def get_model_from_opts(*, opts: Optional[object] = None, **kwargs: Any) -> RSyncOptionsModel:
     if opts is not None and kwargs:
