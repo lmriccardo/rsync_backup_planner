@@ -30,7 +30,8 @@ Notice that this kind of installation is recommended but not required. You can i
 $ backupctl -h
 
 usage: backupctl [-h] {register,validate,status,
-                       remove,enable,disable,run} ...
+                       remove,enable,disable,run,
+                       list} ...
 
 Backup control and consistency tool
 
@@ -43,6 +44,7 @@ positional arguments:
     enable              Enable all or a list of specified jobs
     disable             Disable all or a list of specified jobs
     run                 Run a specified job
+    list                List jobs in the registry or cronlist
 
 options:
   -h, --help            show this help message and exit
