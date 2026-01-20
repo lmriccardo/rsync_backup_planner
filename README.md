@@ -17,7 +17,7 @@ $ cd rsync_backup_planner
 
 # Run the install.sh script
 $ chmod u+x install.sh
-$ ./install.sh
+$ ./install.sh --system
 ```
 
 This will compile the python module into a single executable file using *PyInstaller* into the path `/usr/local/bin` folder. The python module *PyInstaller* if not found in the current python environment will be installed and uninstalled once the entire procedure ends.

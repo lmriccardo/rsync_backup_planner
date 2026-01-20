@@ -3,3 +3,6 @@ example/
 venv/
 **/*.egg-info/
 *.code-workspace
+build
+dist
+*.spec
