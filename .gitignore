@@ -2,3 +2,4 @@ example/
 **/__pycache__/
 venv/
 **/*.egg-info/
+*.code-workspace

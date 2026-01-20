@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import croniter
 import yaml
+import os
 
 from backupctl.constants import SMTP_PROVIDERS
 from backupctl.models.rsync import DeleteType
@@ -9,8 +10,7 @@ from pathlib import Path
 from typing import Optional, List, Union, Dict
 from pydantic import (
     BaseModel, Field, ConfigDict, EmailStr,
-    field_validator, model_validator,
-    ValidationError
+    field_validator, model_validator
 )
 
 CronField = Optional[Union[int,str]]
@@ -25,6 +25,12 @@ class Remote(BaseModel):
     user: Optional[str] = None # The remote username
     password_file: Optional[str] = None # The password file for non-interactive mode
     dest: RemoteDest # Remote Destination
+
+    @field_validator("password_file", mode="before")
+    @classmethod
+    def expandenvs( cls, path: str ) -> str:
+        """ Expand the environment variable if present """
+        return os.path.expandvars( path )
 
 class RsyncOptions(BaseModel):
     compress: bool = False # Enable or disable compression before transmitting
@@ -42,6 +48,22 @@ class RsyncCfg(BaseModel):
     includes: List[str] = Field(default_factory=list)
     sources: List[str] = Field(default_factory=list, min_length=1)
     options: Optional[RsyncOptions] = None
+
+    @field_validator("exclude_output_folder", "exclude_from", 
+                     "excludes", "includes", mode="before")
+    @classmethod
+    def expandenvs( cls, path: str | None | List[str] ) -> str | None | List[str]:
+        """ Expand the environment variable if present """
+        if not path and not isinstance(path, list): return None
+        if not path: return []
+        
+        if isinstance( path, str ): 
+            return os.path.expandvars( path )
+        
+        for idx, p in enumerate(path):
+            path[idx] = os.path.expandvars( p )
+        
+        return path
 
     @model_validator(mode="after")
     def default_options(self) -> 'RsyncCfg':
@@ -103,7 +125,7 @@ class EmailCfg(BaseModel):
         if self.smtp is not None: return self
         domain = self.from_.split("@")[-1]
         if domain not in SMTP_PROVIDERS:
-            raise ValidationError(
+            raise ValueError(
                 f"No SMTP defaults for '{domain}'. "
                 "Please specify smtp.server and smtp.port explicitly."
             )
