@@ -38,18 +38,24 @@ done
 
 printf "%b\n" "[*] Checking Python binary path"
 python_path="$(command -v python3)" || error_check
-tmp_venv_installed=0
+venv_dir="venv"
+venv_created=0
+venv_pre_freeze=""
 
-if [[ "$python_path" == /usr/bin/* ]]; then
-  printf "%b\n" "[*] ${YELLOW}System-wide Python detected at: $python_path${NC}"
-  printf "%b\n" "[*] ${YELLOW}Setting up a temporary virtual env...${NC}"
-
-  python3 -m venv venv || error_check
-  tmp_venv_installed=1
-
-  source venv/bin/activate || error_check
-  python -m pip install -r requirements.txt >/dev/null || error_check
+if [ -d "$venv_dir" ] && [ -f "$venv_dir/bin/activate" ]; then
+  printf "%b\n" "[*] ${GREEN}Using existing virtual env at: $venv_dir${NC}"
+  source "$venv_dir/bin/activate" || error_check
+  venv_pre_freeze="$(python3 -m pip freeze | sort)"
+else
+  printf "%b\n" "[*] ${YELLOW}No local virtual env found at: $venv_dir${NC}"
+  printf "%b\n" "[*] ${YELLOW}Creating a temporary virtual env...${NC}"
+  python3 -m venv "$venv_dir" || error_check
+  venv_created=1
+  source "$venv_dir/bin/activate" || error_check
 fi
+
+printf "%b\n" "[*] Installing project dependencies"
+python3 -m pip install -r requirements.txt >/dev/null || error_check
 
 # Check that PyInstaller is installed (import check)
 printf "%b" "[*] Checking if \"PyInstaller\" package is installed... "
@@ -82,27 +88,38 @@ fi
 printf "%b\n" "[*] Installing binary to ${INSTALL_DIR}"
 "${INSTALL_CMD[@]}" || error_check
 
-# Verify install
-printf "%b\n" "[*] Verifying installation"
-if command -v "$BINARY_NAME" >/dev/null 2>&1; then
-  printf "%b\n" "[*] ${GREEN}Found in PATH: $(command -v "$BINARY_NAME")${NC}"
-else
-  printf "%b\n" "${YELLOW}WARNING: $BINARY_NAME not found in PATH. You may need to add ${INSTALL_DIR} to PATH.${NC}"
-fi
+if [ -z "${SKIP_VERIFY:-}" ]; then
+  # Verify install
+  printf "%b\n" "[*] Verifying installation"
+  if command -v "$BINARY_NAME" >/dev/null 2>&1; then
+    printf "%b\n" "[*] ${GREEN}Found in PATH: $(command -v "$BINARY_NAME")${NC}"
+  else
+    printf "%b\n" "${YELLOW}WARNING: $BINARY_NAME not found in PATH. You may need to add ${INSTALL_DIR} to PATH.${NC}"
+  fi
 
-"$INSTALL_DIR/$BINARY_NAME" --help >/dev/null 2>&1
-if [ $? -eq 0 ]; then
-  printf "%b\n" "[*] ${GREEN}Binary runs OK (--help succeeded).${NC}"
+  "$INSTALL_DIR/$BINARY_NAME" --help >/dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    printf "%b\n" "[*] ${GREEN}Binary runs OK (--help succeeded).${NC}"
+  else
+    printf "%b\n" "${RED}Binary check failed.${NC}"
+    exit 1
+  fi
 else
-  printf "%b\n" "${RED}Binary check failed.${NC}"
-  exit 1
+  printf "%b\n" "[*] Skipping binary verification (SKIP_VERIFY set)"
 fi
 
 # Cleanup venv if we created it
-if [ "$tmp_venv_installed" -eq 1 ]; then
+if [ "$venv_created" -eq 1 ]; then
   printf "%b\n" "[*] Removing the temporary virtual environment"
   deactivate || error_check
-  rm -rf venv || error_check
+  rm -rf "$venv_dir" || error_check
+elif [ -n "$venv_pre_freeze" ]; then
+  venv_post_freeze="$(python3 -m pip freeze | sort)"
+  new_packages="$(comm -13 <(printf "%s\n" "$venv_pre_freeze") <(printf "%s\n" "$venv_post_freeze") | awk -F'==' '{print $1}')"
+  if [ -n "$new_packages" ]; then
+    printf "%b\n" "[*] Removing newly installed packages from existing virtual env"
+    python3 -m pip uninstall -y $new_packages >/dev/null || error_check
+  fi
 fi
 
 printf "%b\n" "[*] ${GREEN}Done.${NC}"

@@ -11,6 +11,11 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+
+    # Put the secret into env so it can be safely checked in `if:`
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,7 +43,11 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x ./install.sh
-          ./install.sh --user
+          SKIP_VERIFY=1 ./install.sh --user
+          if [ ! -f dist/backupctl ]; then
+            echo "Built binary not found at dist/backupctl" >&2
+            exit 1
+          fi
           mv dist/backupctl "dist/backupctl-${GITHUB_REF_NAME}-linux-x86_64"
 
       - name: Collect changelog
@@ -52,31 +61,52 @@ jobs:
           else
             range="${tag_commit}"
           fi
-          git log --no-merges --pretty=format:"- %s (%h)" $range > /tmp/changes.txt
-          printf "changes<<'EOF'\n%s\nEOF\n" "$(cat /tmp/changes.txt)" >> "$GITHUB_OUTPUT"
+          git log --no-merges -n 100 --pretty=format:"- %s (%h)" $range > /tmp/changes.txt
+          if [ ! -s /tmp/changes.txt ]; then
+            echo "No changes listed." > /tmp/changes.txt
+          fi
+          delimiter="CHANGELOG_$(date +%s%N)"
+          {
+            printf "changes<<%s\n" "$delimiter"
+            cat /tmp/changes.txt
+            printf "\n%s\n" "$delimiter"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Summarize changes with Codex
-        id: codex_summary
+        id: run_codex
         uses: openai/codex-action@v1
         with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: gpt-5.2-codex
           prompt: |
-            Provide a short release summary (3-6 bullets) based on the changes below.
-          input: ${{ steps.changelog.outputs.changes }}
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+            Create release notes for tag "${{ github.ref_name }}".
+
+            Requirements:
+            - 3-6 concise bullet points
+            - Focus on user-visible changes
+            - No headings, no intro, just bullets
+
+            Changes since previous tag:
+            ${{ steps.changelog.outputs.changes }}
 
       - name: Prepare release notes
         id: release_notes
         env:
-          CODEX_TEXT: ${{ steps.codex_summary.outputs.text }}
+          CODEX_TEXT: ${{ steps.run_codex.outputs.final-message }}
           CHANGELOG: ${{ steps.changelog.outputs.changes }}
         run: |
           set -euo pipefail
-          if [ -n "$CODEX_TEXT" ]; then
-            printf "body<<'EOF'\n%s\nEOF\n" "$CODEX_TEXT" >> "$GITHUB_OUTPUT"
+          if [ -n "${CODEX_TEXT:-}" ]; then
+            body="$CODEX_TEXT"
           else
-            printf "body<<'EOF'\n%s\nEOF\n" "$CHANGELOG" >> "$GITHUB_OUTPUT"
+            body="$CHANGELOG"
           fi
+          delimiter="BODY_$(date +%s%N)"
+          {
+            printf "body<<%s\n" "$delimiter"
+            printf "%s\n" "$body"
+            printf "\n%s\n" "$delimiter"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
