@@ -15,13 +15,9 @@
 
 ### Enhancements
 
-- [ ] IMPR-001: Improve error handling with custom exceptions
+- [x] IMPR-001: Improve error handling with custom exceptions
     + Add exception specified-classes and remove `AssertionError` and `assert_1`
 
 - [ ] IMPR-002: Improve console logging with rich text (colors and so on)
-
-### Actions
-
-- [ ] ACT-001: Not Yet Defined
 
 ---

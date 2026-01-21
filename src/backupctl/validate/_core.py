@@ -6,7 +6,12 @@ from backupctl.models.rsync import RSyncStatus
 from backupctl.utils.rsync import run_rsync_command
 from backupctl.models.user_config import *
 from backupctl.models.filesystem import *
-from backupctl.utils.exceptions import *
+from backupctl.utils.exceptions import (
+    BackupCtlError,
+    InputValidationError,
+    PermissionDeniedError,
+    ensure,
+)
 
 from collections import defaultdict
 from dataclasses import dataclass
@@ -29,8 +34,8 @@ def user_can_create_in_dir( path: Path ) -> None:
         return user_can_create_in_dir( path.parent )
 
     if not os.access(path.parent, os.W_OK | os.X_OK):
-        print_permission_error( path, with_parent=True )
-        raise PermissionError("Permission error")
+        print_permission_error(path, with_parent=True)
+        raise PermissionDeniedError("Permission error")
 
 def user_can_read_in_dir( path: Path ) -> None:
     """ Check if the current user has read permissions on the folder/file """
@@ -41,21 +46,28 @@ def user_can_read_in_dir( path: Path ) -> None:
         return user_can_read_in_dir( path.parent )
 
     if not os.access(path.parent, os.R_OK):
-        print_permission_error( path )
-        raise PermissionError("Permission error")
+        print_permission_error(path)
+        raise PermissionDeniedError("Permission error")
 
 def check_sock_connection( remote: Remote, args: Args ) -> bool:
     """ Checks the remote connection to the rsync server """
-    remote_ip = socket.gethostbyname(remote.host)
+    remote_ip = "<unresolved>"
+    try:
+        remote_ip = socket.gethostbyname(remote.host)
+    except OSError:
+        if args.verbose:
+            print(
+                f"  (NO) Checking connection to {remote.host} ({remote_ip}) on {remote.port}"
+            )
+        return False
 
     if args.verbose:
-        print((
-            "  ( ) Checking connection to " + 
-            f"{remote.host} ({remote_ip}) on {remote.port}"
-        ), end="")
-    
-    result = False
+        print(
+            f"  ( ) Checking connection to {remote.host} ({remote_ip}) on {remote.port}",
+            end="",
+        )
 
+    result = False
     try:
         with socket.create_connection((remote_ip, remote.port), timeout=2.0):
             result = True
@@ -64,10 +76,9 @@ def check_sock_connection( remote: Remote, args: Args ) -> bool:
 
     if args.verbose:
         result_str = "OK" if result else "NO"
-        print((
-            f"\r  ({result_str}) Checking connection to " + 
-            f"{remote.host} ({remote_ip}) on {remote.port}"
-        ))
+        print(
+            f"\r  ({result_str}) Checking connection to {remote.host} ({remote_ip}) on {remote.port}"
+        )
 
     return result
 
@@ -75,8 +86,11 @@ def _check_rsync_module_auth( remote: Remote ) -> RSyncStatus:
     """ Checks authentication to the remote rsync host and if the module exists """
     # First check that the password_file exists
     if remote.password_file is not None:
-        assert_1(Path(remote.password_file).absolute().is_file(),
-            f"Password file {remote.password_file} does not exists")
+        ensure(
+            Path(remote.password_file).absolute().is_file(),
+            f"Password file {remote.password_file} does not exists",
+            InputValidationError,
+        )
 
     password_file = None if not remote.password_file else \
         Path(remote.password_file).absolute().__str__()    
@@ -107,7 +121,7 @@ def check_remote_module_auth( remote: Remote, args: Args ) -> None:
     result_str = "OK" if inner_result else "NO"
 
     if args.verbose: print(f"    ({result_str}) Checking for remote module: {remote.dest.module}")
-    assert_1(inner_result, "Destination Module not found")
+    ensure(inner_result, "Destination Module not found", InputValidationError)
 
     # Authentication check
     inner_result = status != RSyncStatus.AUTH_FAILED
@@ -123,7 +137,7 @@ def check_remote_module_auth( remote: Remote, args: Args ) -> None:
             f" and password file {password_file}"
         ))
 
-    assert_1(inner_result, "Authentication failed")
+    ensure(inner_result, "Authentication failed", InputValidationError)
 
     # Folder check
     inner_result = status != RSyncStatus.FOLDER_NOT_FOUND
@@ -132,11 +146,11 @@ def check_remote_module_auth( remote: Remote, args: Args ) -> None:
     if args.verbose:
         print(f"    ({result_str}) Checking for remote folder: {remote.dest.module}/{remote.dest.folder}")
     
-    assert_1(inner_result, "Destination Folder not found")
+    ensure(inner_result, "Destination Folder not found", InputValidationError)
 
 def check_remote_dest(remote: Remote, args: Args) -> bool:
     """ Checks if the remote destination exists """
-    assert_1(check_sock_connection( remote, args ), "Connection to remote failed")
+    ensure(check_sock_connection(remote, args), "Connection to remote failed", InputValidationError)
     check_remote_module_auth( remote, args )
 
 def check_exclude_file( rsync: RsyncCfg, args: Args ) -> bool:
@@ -167,8 +181,11 @@ def check_rsync_source_folders( rsync: RsyncCfg, args: Args ) -> None:
                 print_permission_error( source_folder_path )
                 print()
 
-        assert_1(result, f"Source folder {source_folder_path} does " + \
-            "not exists or cannot be read!")
+        ensure(
+            result,
+            f"Source folder {source_folder_path} does not exists or cannot be read!",
+            InputValidationError,
+        )
         
 def check_email_notification_system( email_ntify: EmailCfg, args: Args ) -> Optional[str]:
     """ Check if authentication works """
@@ -210,7 +227,7 @@ def check_notification_system( notification: NotificationCfg, args: Args ) -> No
     """ Checks the correctness of the notification system configuration
     in particular if all services are reachable. It returns a list of 
     successful notification system but, if none is reachable, then raise
-    an AssertionError and exit. """
+    a validation error and exit. """
     if args.verbose:
         print("  [--] Notification system checks")
 
@@ -237,8 +254,11 @@ def validate_target( target: user_cfg.NamedTarget, args: Args ) -> None:
     """ Validates a single target against some checks """
     # Checking if remote destination is reachable
     check_remote_dest( target.remote, args )
-    assert_1(check_exclude_file( target.rsync, args ),
-        f"Exclude file {target.rsync.exclude_from}, does not exists")
+    ensure(
+        check_exclude_file(target.rsync, args),
+        f"Exclude file {target.rsync.exclude_from}, does not exists",
+        InputValidationError,
+    )
     
     check_rsync_source_folders( target.rsync, args )
     check_notification_system( target.notification, args )
@@ -259,7 +279,7 @@ def validate_configuration( config: user_cfg.YAML_Conf ) -> int:
             target_with_name = user_cfg.NamedTarget.from_target(target_name, target)
             validate_target( target_with_name, args )
             print(f"\r- (OK) Validation completed for Target {target_name}")
-        except AssertionError as e:
+        except BackupCtlError as e:
             print(f"\r- (NO) Validation completed for Target {target_name}")
             print(f"[ERROR] {e}")
             exit_code = 1

@@ -69,14 +69,14 @@ def load_registry( path: Path ) -> Registry:
     
 def write_registry( path: Path, registry: Registry ) -> None:
     """ Write the registry into the input path """
-    from backupctl.utils.exceptions import assert_1
+    from backupctl.utils.exceptions import RegistryError
     try:
         path = path.expanduser().resolve()
         if not path.exists(): path.touch()
         content = "\n".join( map(str, registry.values()) )
         path.write_text( content, encoding='utf-8' )
     except Exception as e:
-        assert_1(False, f"[ERROR] Registry writing: {e}")
+        raise RegistryError(f"Registry writing: {e}") from e
 
 def read_registry() -> Registry:
     """ Load the registry or returns None if the

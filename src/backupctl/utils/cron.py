@@ -2,7 +2,7 @@ import subprocess
 
 from typing import List, Callable, TypeAlias, Dict, Tuple
 from backupctl.constants import CRONTAB_TAG_PREFIX, BACKUPCTL_RUN_COMMAND
-from .exceptions import assert_1
+from .exceptions import ExternalCommandError, ensure
 
 CronMatchFn = Callable[[str],bool]
 CronList: TypeAlias = Dict[str,Tuple[bool, str]] | None
@@ -11,7 +11,7 @@ def get_crontab_list() -> List[str]:
     """ Returns the list of all jobs actually registered on crontab """
     cronout = subprocess.run(["crontab", "-l"], capture_output=True, text=True, check=False)
     ok = cronout.returncode == 0 or ( cronout.returncode == 1 and len(cronout.stdout) == 0 )
-    assert_1( ok, f"[ERROR] (crontab -l) error: {cronout.stderr}" )
+    ensure(ok, f"(crontab -l) error: {cronout.stderr}", ExternalCommandError)
     return cronout.stdout.splitlines()
 
 def write_to_cron( input_: str | List[str] ) -> None:
@@ -19,7 +19,7 @@ def write_to_cron( input_: str | List[str] ) -> None:
     if isinstance(input_, list): input_ = "\n".join(input_)
     input_ = input_.rstrip("\n") + ("\n" if input_ != "" else "")
     out = subprocess.run(["crontab", "-"], input=input_, capture_output=True, text=True, check=False)
-    assert_1( out.returncode == 0, f"[ERROR] (crontab -) error: {out.stderr}" )
+    ensure(out.returncode == 0, f"(crontab -) error: {out.stderr}", ExternalCommandError)
 
 def insert_cron_command( cronlist: List[str], line: str | None, repl_match_fn: CronMatchFn ) -> None:
     """ Removes from the cronlist the line matching the input one.

@@ -5,9 +5,13 @@ import shlex
 
 from backupctl.status._core import make_job_consistent
 from backupctl.validate._core import validate_target
-from backupctl.validate._core import \
-    assertion_wrapper, assert_1, Args, \
-    user_can_create_in_dir
+from backupctl.validate._core import Args, user_can_create_in_dir
+from backupctl.utils.exceptions import (
+    InputValidationError,
+    PermissionDeniedError,
+    assertion_wrapper,
+    ensure,
+)
 
 from backupctl.models.plan_config import \
     load_from_target, write_plan_configuration
@@ -21,9 +25,16 @@ from backupctl.utils.cron import *
 def parse_input_arguments( args: argparse.Namespace ) -> Args:
     """ Parse and validates input arguments """
     # Check that the input file is actually a file
-    assert_1(Path(args.config).is_file(), f"Config '{args.config}' is not a file")
-    assert_1(args.config.endswith('.yaml') or args.config.endswith('.yml'),
-            f"Config '{args.config}' is not a YAML file")
+    ensure(
+        Path(args.config).is_file(),
+        f"Config '{args.config}' is not a file",
+        InputValidationError,
+    )
+    ensure(
+        args.config.endswith(".yaml") or args.config.endswith(".yml"),
+        f"Config '{args.config}' is not a YAML file",
+        InputValidationError,
+    )
 
     return Args( Path(args.config).absolute(), args.verbose )
 
@@ -85,7 +96,7 @@ def generate_exclude_file( exclude_out_folder: str | None, target_name: str, rsy
         return exclude_file_path
 
     except PermissionError as _:
-        assert_1(False, "Permission Error")
+        raise PermissionDeniedError("Permission Error")
 
 def create_cronjob( name: str, backup_conf_path: Path, schedule: Schedule, args: Args ) -> None:
     """ Registers a new cronjobs if it does not exists yet """

@@ -49,8 +49,14 @@ class RsyncCfg(BaseModel):
     sources: List[str] = Field(default_factory=list, min_length=1)
     options: Optional[RsyncOptions] = None
 
-    @field_validator("exclude_output_folder", "exclude_from", 
-                     "excludes", "includes", mode="before")
+    @field_validator(
+        "exclude_output_folder",
+        "exclude_from",
+        "excludes",
+        "includes",
+        "sources",
+        mode="before",
+    )
     @classmethod
     def expandenvs( cls, path: str | None | List[str] ) -> str | None | List[str]:
         """ Expand the environment variable if present """

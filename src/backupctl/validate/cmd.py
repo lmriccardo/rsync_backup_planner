@@ -12,13 +12,14 @@ import argparse
 import backupctl.models.user_config as user_cfg
 
 from ._core import validate_configuration
-from backupctl.utils.exceptions import assert_1
+from backupctl.utils.exceptions import InputValidationError, ensure
 from pathlib import Path
 from pydantic import ValidationError
 
 def run( args: argparse.Namespace ) -> None:
     conf_file = Path(args.config).expanduser().resolve()
-    assert_1(conf_file.is_file(), f"Config '{args.config}' is not a file")
+    ensure(conf_file.is_file(), f"Config '{args.config}' is not a file", InputValidationError)
+    result = 0
 
     try:
         # Load the configuration file. A first validation step is
