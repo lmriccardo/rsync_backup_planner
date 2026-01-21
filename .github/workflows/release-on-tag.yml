@@ -21,7 +21,8 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin main --prune --tags
-          if git merge-base --is-ancestor "$GITHUB_SHA" "origin/main"; then
+          tag_commit="$(git rev-parse "${GITHUB_SHA}^{commit}")"
+          if git merge-base --is-ancestor "$tag_commit" "origin/main"; then
             echo "Tag commit is on main."
           else
             echo "Tag commit is not on main. Refusing to release." >&2
@@ -44,11 +45,12 @@ jobs:
         id: changelog
         run: |
           set -euo pipefail
-          prev_tag="$(git describe --tags --abbrev=0 "${GITHUB_SHA}^" 2>/dev/null || true)"
+          tag_commit="$(git rev-parse "${GITHUB_SHA}^{commit}")"
+          prev_tag="$(git describe --tags --abbrev=0 "${tag_commit}^" 2>/dev/null || true)"
           if [ -n "$prev_tag" ]; then
-            range="${prev_tag}..${GITHUB_SHA}"
+            range="${prev_tag}..${tag_commit}"
           else
-            range="${GITHUB_SHA}"
+            range="${tag_commit}"
           fi
           git log --no-merges --pretty=format:"- %s (%h)" $range > /tmp/changes.txt
           printf "changes<<'EOF'\n%s\nEOF\n" "$(cat /tmp/changes.txt)" >> "$GITHUB_OUTPUT"
