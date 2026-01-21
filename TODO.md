@@ -22,6 +22,6 @@
 
 ### Actions
 
-- [ ] ACT-001: Not Yet Defined
+- [x] ACT-001: Release on tag push workflow
 
 ---
