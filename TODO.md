@@ -20,4 +20,8 @@
 
 - [ ] IMPR-002: Improve console logging with rich text (colors and so on)
 
+### Actions
+
+- [x] ACT-001: Release on tag push workflow
+
 ---
