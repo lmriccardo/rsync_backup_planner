@@ -6,6 +6,9 @@ Steps:
     - If not, reply exactly: "I CANNOT IMPLEMENT IT RN".
 
 2. Create a branch `feat/<feature_name>` if it does not exist.
+    - Create the new branch only if the new feature is uncorrelated with the previous one
+    - otherwise, keep working on the same branch
+
 3. Follow `.agent/CONTRIBUTING.md` for structure and conventions.
 4. Implement the feature with minimal, readable code.
 5. Update examples, docs, and config/schema if semantics change.

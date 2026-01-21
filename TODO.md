@@ -20,6 +20,12 @@
 
 - [ ] IMPR-002: Improve console logging with rich text (colors and so on)
 
+### Refactors
+
+- [ ] REF-001: Migrate from REGISTRY txt to a SQLite database
+    + Only one table named REGISTRY
+    + Columns are: Target name, Schedule, Command, Status
+
 ### Actions
 
 - [x] ACT-001: Release on tag push workflow
