@@ -17,8 +17,7 @@
 
 - [x] **IMPR-001**: Improve error handling with custom exceptions
 - [ ] **IMPR-002**: Improve console logging with rich text (colors and so on)
-- [ ] **IMPR-003**: Add tests for backupctl
-    - More description at [impr-003.md](.agent/WORK_DOCS/impr-003.md)
+- [x] **IMPR-003**: Add tests for backupctl
 
 ### Refactors
 
@@ -33,7 +32,7 @@
 
 - [x] **ACT-001**: Release on tag push workflow
 - [x] **ACT-002**: Modify the `release-on-tag` workflow
-- [x] **ACT-003**: In the `release-on-tag` you shall also ship a `.deb` package create from the python -m build
+- [x] **ACT-003**: `release-on-tag` also ship a `.deb` package
 
 ### Miscellaneous
 
