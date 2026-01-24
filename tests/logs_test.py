@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from backupctl.inspect._core import _parse_log_meta
 
-def test_parse_log_meta_with_stderr(tmp_path):
+def test_parse_log_meta_with_stderr(tmp_path: Path) -> None:
+    """Parses started time, exit code, and last stderr line."""
     log_path = tmp_path / "sample.log"
     log_path.write_text(
         "\n".join(
@@ -27,7 +30,8 @@ def test_parse_log_meta_with_stderr(tmp_path):
     assert last_error == "something went wrong"
 
 
-def test_parse_log_meta_without_stderr(tmp_path):
+def test_parse_log_meta_without_stderr(tmp_path: Path) -> None:
+    """Handles empty stderr sections without false errors."""
     log_path = tmp_path / "sample.log"
     log_path.write_text(
         "\n".join(

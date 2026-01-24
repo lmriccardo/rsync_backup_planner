@@ -20,7 +20,8 @@ from backupctl.models.user_config import (
 
 
 @pytest.mark.integration
-def test_validate_against_local_rsync_daemon(tmp_path):
+def test_validate_against_local_rsync_daemon(tmp_path: Path) -> None:
+    """Validates config against a local rsync daemon."""
     if shutil.which("rsync") is None:
         pytest.fail("rsync not installed")
 

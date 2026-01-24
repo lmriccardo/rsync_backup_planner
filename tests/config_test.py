@@ -1,10 +1,12 @@
 import textwrap
+from pathlib import Path
 import pytest
 
 from backupctl.models.user_config import load_user_configuration
 
 
-def _write_config(tmp_path, password_file, source_dir):
+def _write_config( tmp_path: Path, password_file: Path, source_dir: Path) -> Path:
+    """Write a minimal valid config and return its path."""
     config_path = tmp_path / "backup-plan.yml"
     config_path.write_text(
         textwrap.dedent(
@@ -38,7 +40,8 @@ def _write_config(tmp_path, password_file, source_dir):
     return config_path
 
 
-def test_load_valid_config(tmp_path):
+def test_load_valid_config(tmp_path: Path) -> None:
+    """Loads a valid YAML config and ensures the target is present."""
     source_dir = tmp_path / "src"
     source_dir.mkdir()
     (source_dir / "file.txt").write_text("data", encoding="utf-8")
@@ -52,7 +55,8 @@ def test_load_valid_config(tmp_path):
     assert "sample" in config.backup.targets
 
 
-def test_invalid_config_rejected(tmp_path):
+def test_invalid_config_rejected(tmp_path: Path) -> None:
+    """Rejects a malformed YAML configuration."""
     config_path = tmp_path / "invalid.yml"
     config_path.write_text("backup: 123\n", encoding="utf-8")
 

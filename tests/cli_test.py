@@ -1,7 +1,8 @@
 import subprocess
 
 
-def test_cli_help():
+def test_cli_help() -> None:
+    """Ensures main CLI help exits successfully."""
     out = subprocess.run(
         ["python", "-m", "backupctl", "-h"],
         capture_output=True,
@@ -12,7 +13,8 @@ def test_cli_help():
     assert "backupctl" in out.stdout.lower()
 
 
-def test_inspect_help():
+def test_inspect_help() -> None:
+    """Ensures inspect subcommand help exits successfully."""
     out = subprocess.run(
         ["python", "-m", "backupctl", "inspect", "-h"],
         capture_output=True,

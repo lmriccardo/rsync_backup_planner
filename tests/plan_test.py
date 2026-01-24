@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from backupctl.models.plan_config import load_from_target
 from backupctl.models.user_config import (
     NamedTarget,
@@ -9,7 +11,8 @@ from backupctl.models.user_config import (
     NotificationCfg,
 )
 
-def test_plan_generation(tmp_path):
+def test_plan_generation(tmp_path: Path) -> None:
+    """Generates a plan configuration from a target without errors."""
     source_dir = tmp_path / "src"
     source_dir.mkdir()
     password_file = tmp_path / ".rsync_pass"

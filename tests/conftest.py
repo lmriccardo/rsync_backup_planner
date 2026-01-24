@@ -1,8 +1,10 @@
 import pytest
+from pathlib import Path
 from backupctl import constants
 
 @pytest.fixture(autouse=True)
-def temp_backup_dirs(tmp_path, monkeypatch):
+def temp_backup_dirs(tmp_path: Path, monkeypatch) -> Path:
+    """Redirect default backup paths into a temp folder for tests."""
     root = tmp_path / "backups"
     monkeypatch.setattr(constants, "DEFAULT_BACKUP_FOLDER", root)
     monkeypatch.setattr(constants, "DEFAULT_EXCLUDE_FOLDER", root / "rsync-exclude")
