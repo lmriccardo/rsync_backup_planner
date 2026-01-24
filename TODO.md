@@ -32,9 +32,7 @@
 ### Actions
 
 - [x] **ACT-001**: Release on tag push workflow
-- [ ] **ACT-002**: Modify the `release-on-tag` workflow
-    + Remove changelog collection
-    + Adds PyPI package publishing using OpenID connect
+- [x] **ACT-002**: Modify the `release-on-tag` workflow
 
 ### Miscellaneous
 

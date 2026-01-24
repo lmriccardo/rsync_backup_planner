@@ -7,14 +7,15 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
 
-    # Put the secret into env so it can be safely checked in `if:`
-    env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    environment:
+      name: pypi
+      url: https://pypi.org/p/backupctl
 
     steps:
       - name: Checkout
@@ -38,80 +39,70 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: "pip"
+
+      - name: Install build tooling
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip build
+
+      - name: Validate tag matches package version
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, re, sys
+          from pathlib import Path
+
+          tag = os.environ["GITHUB_REF_NAME"]  # e.g. v0.4.2 or 0.4.2
+          pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+
+          m = re.search(r'(?m)^\s*version\s*=\s*"([^"]+)"\s*$', pyproject)
+          if not m:
+            print("ERROR: could not find [project].version in pyproject.toml", file=sys.stderr)
+            sys.exit(1)
+
+          version = m.group(1)
+          normalized_tag = tag[1:] if tag.startswith("v") else tag
+
+          if normalized_tag != version:
+            print(f"ERROR: tag '{tag}' does not match pyproject version '{version}'", file=sys.stderr)
+            sys.exit(1)
+
+          print(f"OK: tag '{tag}' matches version '{version}'")
+          PY
 
       - name: Build binary via install.sh
         run: |
           set -euo pipefail
           chmod +x ./install.sh
           SKIP_VERIFY=1 ./install.sh --user
+
           if [ ! -f dist/backupctl ]; then
             echo "Built binary not found at dist/backupctl" >&2
+            ls -la dist || true
             exit 1
           fi
-          mv dist/backupctl "dist/backupctl-${GITHUB_REF_NAME}-linux-x86_64"
 
-      - name: Collect changelog
-        id: changelog
+          mkdir -p release
+          mv dist/backupctl "release/backupctl-${GITHUB_REF_NAME}-linux-x86_64"
+        
+      - name: Build package (sdist + wheel)
         run: |
           set -euo pipefail
-          tag_commit="$(git rev-parse "${GITHUB_SHA}^{commit}")"
-          prev_tag="$(git describe --tags --abbrev=0 "${tag_commit}^" 2>/dev/null || true)"
-          if [ -n "$prev_tag" ]; then
-            range="${prev_tag}..${tag_commit}"
-          else
-            range="${tag_commit}"
-          fi
-          git log --no-merges -n 100 --pretty=format:"- %s (%h)" $range > /tmp/changes.txt
-          if [ ! -s /tmp/changes.txt ]; then
-            echo "No changes listed." > /tmp/changes.txt
-          fi
-          delimiter="CHANGELOG_$(date +%s%N)"
-          {
-            printf "changes<<%s\n" "$delimiter"
-            cat /tmp/changes.txt
-            printf "\n%s\n" "$delimiter"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Summarize changes with Codex
-        id: run_codex
-        uses: openai/codex-action@v1
-        with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          model: gpt-5.2-codex
-          prompt: |
-            Create release notes for tag "${{ github.ref_name }}".
-
-            Requirements:
-            - 3-6 concise bullet points
-            - Focus on user-visible changes
-            - No headings, no intro, just bullets
-
-            Changes since previous tag:
-            ${{ steps.changelog.outputs.changes }}
-
-      - name: Prepare release notes
-        id: release_notes
-        env:
-          CODEX_TEXT: ${{ steps.run_codex.outputs.final-message }}
-          CHANGELOG: ${{ steps.changelog.outputs.changes }}
-        run: |
-          set -euo pipefail
-          if [ -n "${CODEX_TEXT:-}" ]; then
-            body="$CODEX_TEXT"
-          else
-            body="$CHANGELOG"
-          fi
-          delimiter="BODY_$(date +%s%N)"
-          {
-            printf "body<<%s\n" "$delimiter"
-            printf "%s\n" "$body"
-            printf "\n%s\n" "$delimiter"
-          } >> "$GITHUB_OUTPUT"
+          python -m build
+          ls -la dist
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
-          body: ${{ steps.release_notes.outputs.body }}
-          files: dist/backupctl-${{ github.ref_name }}-linux-x86_64
+          generate_release_notes: true
+          files: |
+            release/backupctl-${{ github.ref_name }}-linux-x86_64
+            dist/*
+
+      - name: Publish to PyPI (Trusted Publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
