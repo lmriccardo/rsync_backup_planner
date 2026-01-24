@@ -44,6 +44,7 @@ def run_backup_command( command: List[str], log_file: Path | None ) -> str:
         log.write("----- STDERR -----\n")
         log.write(str(out.stderr))
         log.write("\n")
+        log.write("----- END STDERR -----\n")
         
         return_code = out.returncode
         finished = datetime.now()

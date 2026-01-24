@@ -57,6 +57,9 @@ def _parse_log_meta(log_path: Path) -> tuple[str, str]:
                 elif line.startswith("----- STDERR"):
                     in_stderr = True
                     continue
+                elif line.startswith("----- END STDERR"):
+                    in_stderr = False
+                    continue
                 elif line.startswith("-----") and in_stderr:
                     in_stderr = False
                 elif in_stderr and last_error == "none" and line:
