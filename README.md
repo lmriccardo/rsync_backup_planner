@@ -24,6 +24,13 @@ This will compile the python module into a single executable file using *PyInsta
 
 Notice that this kind of installation is recommended but not required. You can install it in the way you want, but make sure that there will be at least an executable script into the `/usr/local/bin` folder named `backupctl`, otherwise any created `cronjob` will fail.
 
+To uninstall, run the `uninstall.sh` script:
+
+```bash
+$ chmod u+x uninstall.sh
+$ ./uninstall.sh --system
+```
+
 ## Usage
 
 ```
