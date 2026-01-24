@@ -2,8 +2,14 @@ You are implementing a NEW FEATURE.
 
 Steps:
 
-1. Verify the feature exists in `TODO.md`.
+1. Verify the feature exists as a GitHub issue in the `Backupctl` project,
+   matching the provided project-related ID.
+    - The user is `lmriccardo` (owner of the project)
+    - If GitHub cannot be accessed, ask the user for the issue URL or the full
+      issue text (title + description), or a local file path that contains it.
+    - Do not proceed without the issue details.
     - If not, reply exactly: "I CANNOT IMPLEMENT IT RN".
+    - Read the issue description and treat it as the primary requirements source.
 
 2. Create a branch `feat/<feature_name>` if it does not exist.
     - Create the new branch only if the new feature is uncorrelated with the previous one

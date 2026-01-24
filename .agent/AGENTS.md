@@ -32,7 +32,7 @@ Examine the `README.md` file for more context and example.
 
 ## Tests
 
-There are no explicit test to run to validate correctness at this moment ...
+- Tests are under `tests` folder
 
 ---
 
@@ -42,9 +42,9 @@ There are no explicit test to run to validate correctness at this moment ...
 - Use temp directories or user-scoped paths for any new artifacts.
 - Do not modify files outside this repository.
 - Keep the code simple and easy to understand; avoid over-engineering.
-- **New features** may be implemented ONLY if they are documented in `TODO.md`.
-  - If a requested feature is already marked done, **DO NOT CONSIDER IT**.
-  - If a requested feature is not in `TODO.md`, reply exactly: **"I CANNOT IMPLEMENT IT RN"**.
+
+- **New features** may be implemented ONLY if they are documented as GitHub issues.
+  - MUST FOLLOW [CONTRIBUTING.md](CONTRIBUTING.md#gate-for-new-features) GUIDELINES
   
 - Follow the repo conventions in `.agent/CONTRIBUTING.md`.
 - Do not merge into `main` (or any protected branch). Merges are done by the maintainer.

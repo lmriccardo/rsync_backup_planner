@@ -3,7 +3,9 @@
 ## Scope & rules
 
 - [ ] Change is scoped to the requested task.
-- [ ] For NEW FEATURES: confirmed the feature exists in `TODO.md`.
+- [ ] For NEW FEATURES: confirmed the feature exists in as a GitHub Issue.
+- [ ] If GitHub was inaccessible: issue URL or full issue text (title + description)
+      was provided by the user and used as the requirements source.
 - [ ] No files were modified outside this repository.
 - [ ] No direct commits to `main` or protected branches.
 

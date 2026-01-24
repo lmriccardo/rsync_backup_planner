@@ -3,17 +3,33 @@
 This document defines development best practices for features, refactors, bug fixes, and general contributions
 (including AI agents). It also defines branch naming conventions and project structure rules.
 
-## Gate for new features
+## Gate for new features (MANDATORY)
 
-- You can implement a **new feature** only if it is documented in `TODO.md`.
-- If it is not documented there, reply exactly: **"I CANNOT IMPLEMENT IT RN"**.
+- The user is requesting format like `FEAT-xyz`, `REF-...`, `ACT-...`, `MISC-...`, `FIX-...` and `IMPR-...`
+
+**MUST NOT search the repository. MUST use GitHub project lookup.**
+
+- You can implement a **new feature** only if there is a matching GitHub issue.
+- The issue must belong to the GitHub project named **`Backupctl`** (id `8`) and expose a project-related ID.
+- If the requested ID does not exist, reply exactly: **"I CANNOT IMPLEMENT IT RN"**.
 
 > Note: Bug fixes, docs, and small maintenance changes may proceed if they are clearly requested/scoped.
 
-For each implementation request (feature, bug fix, refactor, enhancements and Miscellaneous) look inside 
-the `.agent/WORK_DOCS/` folder for a file named `<req-id>.md`. If it exists it will contains additional
-details regarding the request that **MUST BE FOLLOWED AND SATISFIED**. If the file does not exists 
-continue with normal work.
+### Gathering issue description (MANDATORY)
+
+1. *Step1*: List all items for the `Backupctl` Github project
+
+```bash
+$ gh project item-list 8 --format json
+```
+
+2. *Step2*: Parse the JSON output from previous command for searching for `iD` fields
+  - A generic ID path is: `json.items[idx].iD`
+
+3. *Step3*: Search for the iD that matches the one given by the user and find the releated Issue ID
+4. *Step4*: View the issue using `gh issue view <issue-id>`
+5. *Step5*: Parse the issue description and make a summary
+6. *Step6*: Ask for approval
 
 ## General information
 
@@ -61,7 +77,7 @@ continue with normal work.
 - Catch errors, print a clean and helpful message, and exit gracefully.
 - Prefer typed/custom exceptions in core logic if helpful, but ensure the CLI output remains user-friendly.
 
-## Refactoring
+## Refactoring (MANDATORY)
 
 - Before any refactoring, provide a detailed plan describing:
   - What will change
