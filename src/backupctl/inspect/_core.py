@@ -25,6 +25,7 @@ class InspectInfo:
     exit_code: str
     exit_code_source: str
     command: str
+    last_error: str
 
 
 def _human_schedule(cmd: str) -> str:
@@ -43,6 +44,8 @@ def _find_latest_log(log_dir: Path) -> Optional[Path]:
 def _parse_log_meta(log_path: Path) -> tuple[str, str]:
     last_run = "unknown"
     exit_code = "unknown"
+    last_error = "none"
+    in_stderr = False
     try:
         with log_path.open("r", encoding="utf-8") as io:
             for line in io:
@@ -51,9 +54,16 @@ def _parse_log_meta(log_path: Path) -> tuple[str, str]:
                     last_run = line.split(":", 1)[1].strip()
                 elif line.startswith("Exit code:"):
                     exit_code = line.split(":", 1)[1].strip()
+                elif line.startswith("----- STDERR"):
+                    in_stderr = True
+                    continue
+                elif line.startswith("-----") and in_stderr:
+                    in_stderr = False
+                elif in_stderr and last_error == "none" and line:
+                    last_error = line
     except OSError:
-        return last_run, exit_code
-    return last_run, exit_code
+        return last_run, exit_code, last_error
+    return last_run, exit_code, last_error
 
 
 def _load_plan(target_name: str) -> PlanCfg:
@@ -77,8 +87,10 @@ def _inspect_target(job: Job) -> InspectInfo:
 
     latest_log = _find_latest_log(log_path)
     if latest_log:
-        last_run, exit_code = _parse_log_meta(latest_log)
+        last_run, exit_code, last_error = _parse_log_meta(latest_log)
         exit_code_source = str(latest_log)
+    else:
+        last_error = "none"
 
     return InspectInfo(
         name=job.name,
@@ -89,6 +101,7 @@ def _inspect_target(job: Job) -> InspectInfo:
         exit_code=exit_code,
         exit_code_source=exit_code_source,
         command=command,
+        last_error=last_error,
     )
 
 
@@ -98,15 +111,19 @@ def _format_status(status: JobStatusType) -> str:
 
 
 def _format_block(info: InspectInfo) -> str:
+    if info.last_error != "none":
+        info.last_error = "\n\r" + info.last_error + "\n"
+    
     return "\n".join(
         [
-            f"Name      : {info.name}",
-            f"Status    : {_format_status(info.status)}",
-            f"Log Path  : {info.log_path}",
-            f"Schedule  : {info.schedule}",
-            f"Last Run  : {info.last_run}",
-            f"Exit Code : {info.exit_code} ({info.exit_code_source})",
-            f"Command   : {info.command}",
+            f"Name       : {info.name}",
+            f"Status     : {_format_status(info.status)}",
+            f"Log Path   : {info.log_path}",
+            f"Schedule   : {info.schedule}",
+            f"Last Run   : {info.last_run}",
+            f"Exit Code  : {info.exit_code} ({info.exit_code_source})",
+            f"Last Error : {info.last_error}",
+            f"Command    : {info.command}",
         ]
     )
 

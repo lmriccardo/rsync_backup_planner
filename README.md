@@ -36,14 +36,15 @@ $ ./uninstall.sh --system
 ```
 $ backupctl -h
 
-usage: backupctl [-h] {register,validate,status,
-                       remove,enable,disable,run,
-                       list} ...
+BACKUPCTL Version 0.1.0
+usage: backupctl [-h] [--version]
+                 {register,validate,status,remove,enable,disable,run,list,inspect}
+                 ...
 
 Backup control and consistency tool
 
 positional arguments:
-  {register,validate,status,remove,enable,disable,run}
+  {register,validate,status,remove,enable,disable,run,list,inspect}
     register            Create and register a new backup plan
     validate            Validate a user configuration
     status              High-level health check
@@ -52,6 +53,7 @@ positional arguments:
     disable             Disable all or a list of specified jobs
     run                 Run a specified job
     list                List jobs in the registry or cronlist
+    inspect             Inspect a registered target
 
 options:
   -h, --help            show this help message and exit

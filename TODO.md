@@ -6,10 +6,7 @@
 
 ### Features
 
-- [ ] **FEAT-001**: Implement `backupctl inspect <TARGET>` command
-    + It inspects a registered target (config summary, notifications, command, status)
-    + More description at [feat-001.md](.agent/WORK_DOCS/feat-001.md)
-
+- [x] **FEAT-001**: Implement `backupctl inspect <TARGET>` command
 - [x] **FEAT-002**: Shows version tag when running `backupctl`
 
 - [ ] **FEAT-003**: Webhook notifications
