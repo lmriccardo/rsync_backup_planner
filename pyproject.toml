@@ -23,10 +23,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/lmriccardo/backupctl"
-Repository = "https://github.com/lmriccardo/backupctl"
-Issues = "https://github.com/lmriccardo/backupctl/issues"
-Changelog = "https://github.com/lmriccardo/backupctl/releases"
+Homepage = "https://github.com/lmriccardo/rsync_backup_planner"
+Repository = "https://github.com/lmriccardo/rsync_backup_planner"
+Issues = "https://github.com/lmriccardo/rsync_backup_planner/issues"
+Changelog = "https://github.com/lmriccardo/rsync_backup_planner/releases"
 
 [project.scripts]
 backupctl = "backupctl.cli:main"
