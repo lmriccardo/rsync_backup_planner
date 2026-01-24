@@ -12,6 +12,7 @@ from backupctl.constants import (
 from backupctl.models.plan_config import PlanCfg, load_plan_configuration
 from backupctl.models.registry import Job, JobStatusType, Registry, read_registry
 from backupctl.utils.exceptions import InputValidationError, ensure
+from backupctl.utils.schedule import human_schedule_from_cron
 
 
 @dataclass
@@ -27,10 +28,7 @@ class InspectInfo:
 
 
 def _human_schedule(cmd: str) -> str:
-    parts = cmd.split()
-    if len(parts) < 6:
-        return "unknown"
-    return " ".join(parts[:5])
+    return human_schedule_from_cron(cmd)
 
 
 def _find_latest_log(log_dir: Path) -> Optional[Path]:
