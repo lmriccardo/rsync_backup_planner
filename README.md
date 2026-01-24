@@ -163,3 +163,17 @@ This will install the python module in the current python environment. Now any c
 ```
 $ python -m backupctl COMMAND [OPTIONS...]
 ```
+
+### Testing
+
+Run unit tests:
+
+```
+$ python -m pytest -q -m "not integration"
+```
+
+Run integration tests (requires local rsync):
+
+```
+$ python -m pytest -q -m integration
+```
