@@ -16,8 +16,6 @@
 ### Enhancements
 
 - [x] **IMPR-001**: Improve error handling with custom exceptions
-    + Add exception specified-classes and remove `AssertionError` and `assert_1`
-
 - [ ] **IMPR-002**: Improve console logging with rich text (colors and so on)
 
 ### Refactors
@@ -26,16 +24,18 @@
     + Only one table named REGISTRY
     + Columns are: Target name, Schedule, Command, Status
 
+- [ ] **REF-002**: Refactors overall package structure
+    + Mode Details in [ref-002.md](./.agent/WORK_DOCS/ref-002.md)
+
 ### Actions
 
 - [x] **ACT-001**: Release on tag push workflow
 - [x] **ACT-002**: Modify the `release-on-tag` workflow
+- [x] **ACT-003**: In the `release-on-tag` you shall also ship a `.deb` package create from the python -m build
 
 ### Miscellaneous
 
-- [x] **MISC-001**: Modify the `pyproject.toml` file so that the python package
-      is also installed using pip as a runnable script.
-
+- [x] **MISC-001**: Modify the `pyproject.toml` to install a runnable script.
 - [x] **MISC-002**: Create an `uninstall.sh` script
 
 ---

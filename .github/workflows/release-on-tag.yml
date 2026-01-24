@@ -44,6 +44,8 @@ jobs:
       - name: Install build tooling
         run: |
           set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev
           python -m pip install -U pip build
 
       - name: Validate tag matches package version
@@ -86,11 +88,69 @@ jobs:
           mkdir -p release
           mv dist/backupctl "release/backupctl-${GITHUB_REF_NAME}-linux-x86_64"
         
-      - name: Build package (sdist + wheel)
+      - name: Build wheel (source of truth artifact)
         run: |
           set -euo pipefail
           python -m build
           ls -la dist
+
+      - name: Ensure requirements.lock exists
+        run: |
+          set -euo pipefail
+          if [ ! -f requirements.lock ]; then
+            echo "requirements.lock not found. Commit it to the repo for reproducible .deb builds." >&2
+            exit 1
+          fi
+
+      - name: Build .deb (vendored Python deps)
+        run: |
+          set -euo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends dpkg-dev
+
+          version="${GITHUB_REF_NAME#v}"
+
+          deb_root="deb_pkg"
+          out_dir="release"
+          deb_out="${out_dir}/backupctl_${version}_all.deb"
+
+          rm -rf "$deb_root"
+          mkdir -p \
+            "$deb_root/DEBIAN" \
+            "$deb_root/usr/lib/backupctl" \
+            "$deb_root/usr/bin"
+
+          # Vendor: install your wheel + pinned deps into /usr/lib/backupctl
+          python -m pip install --no-compile --target "$deb_root/usr/lib/backupctl" dist/*.whl
+          python -m pip install --no-compile --target "$deb_root/usr/lib/backupctl" -r requirements.lock
+
+          # Wrapper: requires src/backupctl/__main__.py so `python -m backupctl` works
+          cat > "$deb_root/usr/bin/backupctl" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          export PYTHONPATH="/usr/lib/backupctl${PYTHONPATH:+:$PYTHONPATH}"
+          exec /usr/bin/python3 -m backupctl "$@"
+          EOF
+          chmod 0755 "$deb_root/usr/bin/backupctl"
+
+          # Minimal control file (private repo style; deps are vendored)
+          cat > "$deb_root/DEBIAN/control" <<EOF
+          Package: backupctl
+          Version: ${version}
+          Section: utils
+          Priority: optional
+          Architecture: all
+          Maintainer: lmriccardo <rlmarca.dev@gmail.com>
+          Depends: python3 (>= 3.12), rsync
+          Description: Declarative rsync-based backup automation tool
+           backupctl generates and manages rsync backup jobs.
+          EOF
+
+          mkdir -p "$out_dir"
+          dpkg-deb --root-owner-group --build "$deb_root" "$deb_out"
+          ls -lah "$deb_out"
+
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -100,6 +160,7 @@ jobs:
           generate_release_notes: true
           files: |
             release/backupctl-${{ github.ref_name }}-linux-x86_64
+            release/*.deb
             dist/*
 
       - name: Publish to PyPI (Trusted Publishing)

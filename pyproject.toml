@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 keywords = ["backup","rsync","automation","cron","nas"]
 authors = [{ name = "lmriccardo", email = "rlmarca.dev@gmail.com" }]
+license = { text = "MIT" }
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: System Administrators",
@@ -20,6 +21,13 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Operating System :: POSIX :: Linux"
+]
+
+dependencies = [
+  "pydantic[email]>=2.6",
+  "croniter>=2.0",
+  "PyYAML>=6.0",
+  "tabulate>=0.9",
 ]
 
 [project.urls]
