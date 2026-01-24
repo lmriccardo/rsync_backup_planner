@@ -1,0 +1,45 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install system deps
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y rsync
+
+      - name: Install Python deps
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip
+          python -m pip install -r requirements.lock
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Run tests
+        run: |
+          set -euo pipefail
+          pytest -q -m "not integration"
+
+      - name: Run integration tests
+        run: |
+          set -euo pipefail
+          pytest -q -m integration

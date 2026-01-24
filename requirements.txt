@@ -2,3 +2,4 @@ pydantic[email]>=2.6
 croniter>=2.0
 PyYAML>=6.0
 tabulate>=0.9
+pytest>=8.3

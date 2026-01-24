@@ -31,6 +31,12 @@ $ chmod u+x uninstall.sh
 $ ./uninstall.sh --system
 ```
 
+Otherwise, you can install it using `pip` to install the latest version
+
+```bash
+$ python3 -m pip install backupctl
+```
+
 ## Usage
 
 ```

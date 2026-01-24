@@ -17,6 +17,8 @@
 
 - [x] **IMPR-001**: Improve error handling with custom exceptions
 - [ ] **IMPR-002**: Improve console logging with rich text (colors and so on)
+- [ ] **IMPR-003**: Add tests for backupctl
+    - More description at [impr-003.md](.agent/WORK_DOCS/impr-003.md)
 
 ### Refactors
 

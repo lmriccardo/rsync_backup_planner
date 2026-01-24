@@ -113,7 +113,7 @@ class Schedule(BaseModel):
     
 class SMTP_Cfg(BaseModel):
     server: str
-    port: Optional[int] = Field(min=1, max=65535,default=None)
+    port: Optional[int] = Field(default=None, ge=1, le=65535)
     ssl: bool = False
 
 class EmailCfg(BaseModel):
