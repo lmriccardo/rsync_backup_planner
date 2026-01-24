@@ -1,4 +1,5 @@
 import argparse
+import sys
 import backupctl.register.cmd as register
 import backupctl.status.cmd as status
 import backupctl.validate.cmd as validate
@@ -6,6 +7,7 @@ import backupctl.remove.cmd as remove
 import backupctl.enable_disable.cmd as enable_disable
 import backupctl.run.cmd as run
 import backupctl.list.cmd as list_
+from backupctl.utils.version import format_version_output
 
 def add_bool_argument(
     parser: argparse.ArgumentParser, *arg_name: str, help: str="", 
@@ -15,7 +17,19 @@ def add_bool_argument(
         help=help, default=default)
 
 def main():
-    parser = argparse.ArgumentParser(prog="backupctl", description="Backup control and consistency tool")
+    if "--version" in sys.argv:
+        print(format_version_output())
+        return 0
+
+    parser = argparse.ArgumentParser(
+        prog="backupctl",
+        description="Backup control and consistency tool",
+    )
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Show version information",
+    )
     sub = parser.add_subparsers(required=True)
     
     # Create the: backupctl register COMMAND
@@ -66,6 +80,7 @@ def main():
     add_bool_argument(g, "--enabled", help="Selects only enabled tasks")
     add_bool_argument(g, "--disabled", help="Selects only disabled tasks")
 
+    print(format_version_output())
     args = parser.parse_args()
     args.func(args)
     return 0

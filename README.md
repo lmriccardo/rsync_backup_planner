@@ -48,6 +48,14 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
+  --version             Show version information
+```
+
+Check the installed version:
+
+```
+$ backupctl --version
+BACKUPCTL Version <version>
 ```
 
 This example will show just the main command `backupctl register`.

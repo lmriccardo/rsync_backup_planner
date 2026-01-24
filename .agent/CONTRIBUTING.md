@@ -10,6 +10,11 @@ This document defines development best practices for features, refactors, bug fi
 
 > Note: Bug fixes, docs, and small maintenance changes may proceed if they are clearly requested/scoped.
 
+For each implementation request (feature, bug fix, refactor, enhancements and Miscellaneous) look inside 
+the `.agent/WORK_DOCS/` folder for a file named `<req-id>.md`. If it exists it will contains additional
+details regarding the request that **MUST BE FOLLOWED AND SATISFIED**. If the file does not exists 
+continue with normal work.
+
 ## General information
 
 - To run `backupctl` via Python, use the virtual environment `venv` and run:

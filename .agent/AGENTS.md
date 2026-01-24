@@ -59,16 +59,16 @@ Before acting on any request, classify it as exactly one of:
 - **refactor**
 - **docs**
 
-If the request is ambiguous, **default to `feature`**.
+If the request is ambiguous, **default to `chore`**.
 
 ### Automatic prompt application (MANDATORY)
 
 After classifying the request, apply the corresponding prompt automatically:
 
-- **feature** → follow `.agent/PROMPTS/feature.md`
-- **bugfix** → follow `.agent/PROMPTS/bugfix.md`
+- **feature**  → follow `.agent/PROMPTS/feature.md`
+- **bugfix**   → follow `.agent/PROMPTS/bugfix.md`
 - **refactor** → follow `.agent/PROMPTS/refactor.md`
-- **docs** → follow `.agent/PROMPTS/docs.md`
+- **docs**     → Not yet written
 
 These prompts define the default execution steps and constraints.
 
