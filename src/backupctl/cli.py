@@ -7,6 +7,7 @@ import backupctl.remove.cmd as remove
 import backupctl.enable_disable.cmd as enable_disable
 import backupctl.run.cmd as run
 import backupctl.list.cmd as list_
+import backupctl.inspect.cmd as inspect_
 from backupctl.utils.version import format_version_output
 
 def add_bool_argument(
@@ -79,6 +80,15 @@ def main():
     add_bool_argument(p_list, "--cron", help="list jobs from crontab")
     add_bool_argument(g, "--enabled", help="Selects only enabled tasks")
     add_bool_argument(g, "--disabled", help="Selects only disabled tasks")
+
+    # Create the: backupctl inspect
+    p_inspect = sub.add_parser("inspect", help="Inspect a registered target")
+    p_inspect.set_defaults(func=inspect_.run)
+    p_inspect.add_argument(
+        "--target",
+        nargs="+",
+        help="List of target jobs to inspect (default: all)",
+    )
 
     print(format_version_output())
     args = parser.parse_args()
