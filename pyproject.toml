@@ -4,8 +4,29 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "backupctl"
-version = "0.1.0"
+version = "0.1.2"
+description = "Declarative rsync-based backup automation tool"
+readme = "README.md"
 requires-python = ">=3.12"
+keywords = ["backup","rsync","automation","cron","nas"]
+authors = [{ name = "lmriccardo", email = "rlmarca.dev@gmail.com" }]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: System Administrators",
+  "Topic :: System :: Archiving :: Backup",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: POSIX :: Linux"
+]
+
+[project.urls]
+Homepage = "https://github.com/lmriccardo/backupctl"
+Repository = "https://github.com/lmriccardo/backupctl"
+Issues = "https://github.com/lmriccardo/backupctl/issues"
+Changelog = "https://github.com/lmriccardo/backupctl/releases"
 
 [project.scripts]
 backupctl = "backupctl.cli:main"
