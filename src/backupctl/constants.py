@@ -11,6 +11,7 @@ DEFAULT_PLAN_SUFFIX      = "-plan.json"
 BACKUPCTL_RUN_COMMAND    = "/usr/local/bin/backupctl"
 REGISTERED_JOBS_FILE     = DEFAULT_BACKUP_FOLDER / "REGISTRY"
 CRONTAB_TAG_PREFIX       = "#backupctl:"
+RELEASE_API_URL          = "https://pypi.org/simple/backupctl/"
 
 SMTP_PROVIDERS = {
     "gmail.com":  ("smtp.gmail.com", 587, False),

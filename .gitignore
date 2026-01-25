@@ -5,6 +5,6 @@ venv/
 *.code-workspace
 build
 dist
-*.spec
 .env
 **/.pytest_cache/
+**/_version.py

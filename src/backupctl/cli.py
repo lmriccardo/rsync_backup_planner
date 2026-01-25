@@ -1,5 +1,6 @@
 import argparse
 import sys
+import requests
 import backupctl.register.cmd as register
 import backupctl.status.cmd as status
 import backupctl.validate.cmd as validate
@@ -8,7 +9,8 @@ import backupctl.enable_disable.cmd as enable_disable
 import backupctl.run.cmd as run
 import backupctl.list.cmd as list_
 import backupctl.inspect.cmd as inspect_
-from backupctl.utils.version import format_version_output
+
+from backupctl.utils.version import format_version
 
 def add_bool_argument(
     parser: argparse.ArgumentParser, *arg_name: str, help: str="", 
@@ -19,18 +21,14 @@ def add_bool_argument(
 
 def main():
     if "--version" in sys.argv:
-        print(format_version_output())
+        format_version()
         return 0
 
     parser = argparse.ArgumentParser(
         prog="backupctl",
         description="Backup control and consistency tool",
     )
-    parser.add_argument(
-        "--version",
-        action="store_true",
-        help="Show version information",
-    )
+
     sub = parser.add_subparsers(required=True)
     
     # Create the: backupctl register COMMAND
@@ -90,7 +88,7 @@ def main():
         help="List of target jobs to inspect (default: all)",
     )
 
-    print(format_version_output())
+    format_version()
     args = parser.parse_args()
     args.func(args)
     return 0
