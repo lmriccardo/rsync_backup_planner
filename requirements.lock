@@ -6,6 +6,10 @@
 #
 annotated-types==0.7.0
     # via pydantic
+certifi==2026.1.4
+    # via requests
+charset-normalizer==3.4.4
+    # via requests
 croniter==6.0.0
     # via -r requirements.txt
 dnspython==2.8.0
@@ -13,7 +17,9 @@ dnspython==2.8.0
 email-validator==2.3.0
     # via pydantic
 idna==3.11
-    # via email-validator
+    # via
+    #   email-validator
+    #   requests
 iniconfig==2.3.0
     # via pytest
 packaging==26.0
@@ -34,6 +40,8 @@ pytz==2025.2
     # via croniter
 pyyaml==6.0.3
     # via -r requirements.txt
+requests==2.32.5
+    # via -r requirements.txt
 six==1.17.0
     # via python-dateutil
 tabulate==0.9.0
@@ -45,3 +53,5 @@ typing-extensions==4.15.0
     #   typing-inspection
 typing-inspection==0.4.2
     # via pydantic
+urllib3==2.6.3
+    # via requests

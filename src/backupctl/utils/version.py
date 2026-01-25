@@ -1,78 +1,84 @@
-import re
-import subprocess
-from importlib import metadata
-from pathlib import Path
-from typing import Optional
+import requests
 
+from backupctl.constants import RELEASE_API_URL
+from packaging.version import Version
+from datetime import datetime
+from dataclasses import dataclass
+from typing import List, Tuple, TypeAlias
 
-def _parse_version_parts(version: str) -> Optional[tuple[int, ...]]:
-    parts = re.findall(r"\d+", version)
-    if not parts:
-        return None
-    return tuple(int(p) for p in parts)
+try:
+    from backupctl._version import __version__
+except Exception:
+    __version__ = "0.0.0"
 
+@dataclass
+class RemoteFileInfo:
+    name: str
+    upload_time: datetime
 
-def _read_pyproject_version() -> Optional[str]:
-    try:
-        import tomllib
-    except ModuleNotFoundError:
-        return None
-    root = Path(__file__).resolve().parents[3]
-    pyproject = root / "pyproject.toml"
-    if not pyproject.exists():
-        return None
-    try:
-        data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    return data.get("project", {}).get("version")
+VersionList : TypeAlias = List[Version]
+FileList    : TypeAlias = List[RemoteFileInfo]
 
+def _get_all_versions() -> Tuple[VersionList, FileList] | None:
+    """ Get the lastest version of the backupctl project """
+    headers = {'Host': 'pypi.org', 'Accept': 'application/vnd.pypi.simple.v1+json'}
+    response = requests.get(RELEASE_API_URL, headers=headers, timeout=10)
+    if not response.ok: return
+    payload = response.json()
+    if not isinstance(payload, dict): return
+    if not "versions" in payload: return
+    if not isinstance(payload["versions"], list): return
+    if not "files" in payload: return
 
-def _read_git_latest_tag() -> Optional[str]:
-    try:
-        result = subprocess.run(
-            ["git", "tag", "--sort=version:refname"],
-            check=False,
-            capture_output=True,
-            text=True,
+    # First parse all files
+    version_list = list(map(Version, payload.get('versions')))
+    file_list = []
+    for file_data in payload.get("files"):
+        if not isinstance(file_data, dict): continue
+
+        file_name = file_data.get('filename')
+        upload_time = file_data.get('upload-time')
+
+        if not (isinstance(file_name, str) and isinstance(upload_time, str)):
+            continue
+
+        upload_time = datetime.fromisoformat(upload_time.replace("Z", "+00:00"))
+        file_list.append(RemoteFileInfo( file_name, upload_time ))
+        
+    return version_list, file_list
+
+def _get_latest_release( versions: VersionList ) -> Version:
+    """ Returns the lastest release """
+    return max( versions )
+
+def _get_release_time( version: Version, files: FileList ) -> datetime | None:
+    """ Return the date when the version has been released """
+    version_str = str(version) # Convert back to string
+    for fileitem in files:
+        if fileitem.name.startswith(f"backupctl-{version_str}"):
+            return fileitem.upload_time
+
+    return None
+
+def format_version() -> None:
+    """ Format the version and get latest version """
+    versions, files = _get_all_versions()
+    curr_version = Version(__version__)
+    last_version = _get_latest_release( versions )
+    curr_version_time = _get_release_time( curr_version, files )
+    last_version_time = _get_release_time( last_version, files )
+
+    # Print the current version
+    print(f"Backupctl Version {curr_version} (", end="")
+    curr_t = "Not Yet Released" if curr_version_time is None \
+        else str(curr_version_time)
+    print(f"{curr_t})")
+
+    # Print if there is a more recent version
+    if curr_version < last_version:
+        print(
+            "!! A new version is available - " +\
+            f"{last_version} ({last_version_time}) !!"
         )
-    except OSError:
-        return None
-    if result.returncode != 0:
-        return None
-    tags = [line.strip() for line in result.stdout.splitlines() if line.strip()]
-    if not tags:
-        return None
-    return tags[-1]
-
-
-def get_current_version() -> str:
-    try:
-        return metadata.version("backupctl")
-    except metadata.PackageNotFoundError:
-        pass
-    version = _read_pyproject_version()
-    if version:
-        return version
-    return _read_git_latest_tag() or "unknown"
-
-
-def get_latest_version() -> Optional[str]:
-    return _read_git_latest_tag()
-
-
-def has_newer_version(current: str, latest: str) -> bool:
-    current_parts = _parse_version_parts(current)
-    latest_parts = _parse_version_parts(latest)
-    if current_parts is None or latest_parts is None:
-        return False
-    return latest_parts > current_parts
-
-
-def format_version_output() -> str:
-    current = get_current_version()
-    latest = get_latest_version()
-    lines = [f"BACKUPCTL Version {current}"]
-    if latest and has_newer_version(current, latest):
-        lines.append(f"Newer version available: {latest}")
-    return "\n".join(lines)
+        
+    print()

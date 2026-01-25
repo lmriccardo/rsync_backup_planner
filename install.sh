@@ -73,7 +73,7 @@ fi
 
 # Build binary
 printf "%b\n" "[*] Creating the binary"
-pyinstaller --onefile --console --name "$BINARY_NAME" src/backupctl/__main__.py || error_check
+pyinstaller backupctl.spec || error_check
 
 # Decide installation target
 if [ "$INSTALL_MODE" = "system" ]; then
