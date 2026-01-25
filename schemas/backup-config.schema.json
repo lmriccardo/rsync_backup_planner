@@ -263,6 +263,16 @@
             }
           ],
           "default": null
+        },
+        "keep_specials": {
+          "default": false,
+          "title": "Keep Specials",
+          "type": "boolean"
+        },
+        "keep_devices": {
+          "default": false,
+          "title": "Keep Devices",
+          "type": "boolean"
         }
       },
       "title": "RsyncOptions",
@@ -277,6 +287,8 @@
         "port": {
           "anyOf": [
             {
+              "maximum": 65535,
+              "minimum": 1,
               "type": "integer"
             },
             {
@@ -284,8 +296,6 @@
             }
           ],
           "default": null,
-          "max": 65535,
-          "min": 1,
           "title": "Port"
         },
         "ssl": {
@@ -383,6 +393,7 @@
       "type": "object"
     },
     "Target": {
+      "additionalProperties": false,
       "properties": {
         "remote": {
           "$ref": "#/$defs/Remote"

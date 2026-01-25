@@ -38,6 +38,8 @@ class RsyncOptions(BaseModel):
     show_progress: bool = True # Show progress while synching
     itemize_changes: bool = False # Show change-summary on all updates
     delete: Optional[DeleteType] = None # Delete mode
+    keep_specials: bool=False # Keep specials files
+    keep_devices: bool=False # Keep device files
 
 class RsyncCfg(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_default=True)
