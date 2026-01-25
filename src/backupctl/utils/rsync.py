@@ -34,7 +34,7 @@ def create_rsync_command(**kwargs: Any) -> List[str]: ...
 
 def create_rsync_command(*, opts: Optional[object] = None, **kwargs: Any) -> List[str]:
     """ Format the rsync command as list of parts from options """
-    opts = get_model_from_opts(opts=opts, **kwargs)
+    opts: RSyncOptionsModel = get_model_from_opts(opts=opts, **kwargs)
 
     command = ["rsync"]
 
@@ -56,6 +56,8 @@ def create_rsync_command(*, opts: Optional[object] = None, **kwargs: Any) -> Lis
     if opts.exclude_from: command += [f"--exclude-from={opts.exclude_from}"]
     if opts.numeric_ids: command += ["--numeric-ids"]
     if opts.itemize_changes: command += ["--itemize-changes"]
+    if not opts.keep_specials: command += ["--no-specials"]
+    if not opts.keep_devices: command += ["--no-devices"]
 
     # Add the sources
     if opts.sources: command.extend(opts.sources)
