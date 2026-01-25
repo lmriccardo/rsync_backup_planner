@@ -118,6 +118,8 @@ class RSyncOptionsModel(BaseModel):
     numeric_ids: bool = True
     use_flags: bool = False
     itemize_changes: bool = False
+    keep_specials: bool = False
+    keep_devices: bool = False
 
     module: Optional[str] = None
     folder: Optional[str] = None

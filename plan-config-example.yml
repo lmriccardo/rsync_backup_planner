@@ -101,6 +101,18 @@ backup:
           # [OPTIONAL, default=false]
           itemize_changes: true # or false
 
+          # Keep specials files likes UNIX sockets or FIFOs.
+          # To enable this option you shall check that the target 
+          # filesystem support this kind of files
+          # [OPTIONAL, default=false]
+          keep_specials: false # or true
+
+          # Keep devices file (`/dev/null`, `/dev/sda`, ...)
+          # To enable this option you shall check that the target 
+          # filesystem support this kind of files
+          # [OPTIONAL, default=false]
+          keep_devices: false # or true
+
       # Describes the backup frequency as a cronjob.
       # null are converted into * wildcards
       # Setting every field to null means * * * * * in cron string
