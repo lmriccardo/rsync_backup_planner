@@ -1,7 +1,9 @@
 import backupctl.models.user_config as user_cfg
 import socket
 import os
+import requests
 
+from backupctl.constants import COMMON_4XX_STATUS_CODE
 from backupctl.models.rsync import RSyncStatus
 from backupctl.utils.rsync import run_rsync_command
 from backupctl.models.user_config import *
@@ -223,6 +225,31 @@ def check_email_notification_system( email_ntify: EmailCfg, args: Args ) -> Opti
 
     return error
 
+def check_webhook_notification_system( webhook_ntfy: WebhookCfg, args: Args ) -> Optional[str]:
+    """ Check if the endpoint is reachable """
+    # Performs a simple GET request on the requested url
+    try:
+        response = requests.get( webhook_ntfy.url, headers=webhook_ntfy.headers, allow_redirects=True )
+    except requests.exceptions.Timeout:
+        return "Webhook endpoint timed out"
+    except requests.exceptions.ConnectionError:
+        return "Webhook endpoint is unreachable"
+    except requests.RequestException as exc:
+        return f"Webhook request failed: {exc}"
+    
+    status = response.status_code
+
+    if 200 <= status < 300:
+        return None
+    
+    if status in COMMON_4XX_STATUS_CODE:
+        return COMMON_4XX_STATUS_CODE[status]
+
+    if 500 <= status < 600:
+        return f"Webhook endpoint server error ({status})"
+
+    return f"Webhook endpoint returned unexpected status code ({status})"
+
 def check_notification_system( notification: NotificationCfg, args: Args ) -> None:
     """ Checks the correctness of the notification system configuration
     in particular if all services are reachable. It returns a list of 
@@ -240,7 +267,11 @@ def check_notification_system( notification: NotificationCfg, args: Args ) -> No
         errors["email"] = error
 
     # Check for webhooks notification system if provided
-    # ...
+    if notification.webhooks is not None:
+        for idx, webhook_config in enumerate( notification.webhooks ):
+            error = check_webhook_notification_system( webhook_config, args )
+            if error is not None: notification.webhooks[idx] = None
+            errors[f"webhook_{idx+1}"] = error
         
     if any( errors.values() ) and args.verbose:
         error_msg = "\n[WARNING] Notification System Errors:\n  "

@@ -84,6 +84,21 @@
       "title": "EmailCfg",
       "type": "object"
     },
+    "EventType": {
+      "enum": [
+        "success",
+        "failure"
+      ],
+      "title": "EventType",
+      "type": "string"
+    },
+    "NotifType": {
+      "enum": [
+        "discord"
+      ],
+      "title": "NotifType",
+      "type": "string"
+    },
     "NotificationCfg": {
       "properties": {
         "email": {
@@ -96,6 +111,21 @@
             }
           ],
           "default": null
+        },
+        "webhooks": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/WebhookCfg"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Webhooks"
         }
       },
       "title": "NotificationCfg",
@@ -422,6 +452,65 @@
         "schedule"
       ],
       "title": "Target",
+      "type": "object"
+    },
+    "WebhookCfg": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/NotifType"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/EventType"
+          },
+          "minItems": 1,
+          "title": "Events",
+          "type": "array"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout"
+        },
+        "headers": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Headers"
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "url"
+      ],
+      "title": "WebhookCfg",
       "type": "object"
     }
   },

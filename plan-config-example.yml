@@ -160,3 +160,39 @@ backup:
             # method of notification will be ignored
             # [OPTIONAL, default=False]
             ssl: false # or true
+
+        # Webhooks notifications. It is a list of notification setting.
+        # Each of them must defines the end-point, on which events
+        # to configure the notification, the timeout for retrying
+        # and additional (optional) authorization methods.
+        #
+        # Active possible endpoints are: Discord.
+        #
+        # [OPTIONAL]
+        webhooks:
+            # Here is the the name of the service. There can be duplicated
+            # services ( at the end each of them is assigned to a unique id )
+            # [REQUIRED, string]
+          - name: discord-on-failure
+            # The type of the webhook service endpoint. There is a
+            # limited set of available endpoints.
+            # [REQUIRED]
+            type: discord
+            # The endpoint URL of the service
+            # [REQUIRED]
+            url: https://discord.com/api/webhooks/...
+            # Subscribed Events: failure, success
+            # [OPTIONAL, default=all events]
+            events: [ failure ]
+            # Timeout for retrying sending the notification.
+            # Value can be expressed in seconds (s), milliseconds (ms),
+            # microseconds (us) and that's it.
+            # [OPTIONAL, default=no timeout, no retrying]
+            timeout: 5s
+            # Additional headers used for the requests, such 
+            # as Authentication and Authorization tokens
+            # [OPTIONAL, default=null]
+            headers: null
+              # Authorization: Bearer ${WEBHOOK_TOKEN}
+
+          # - additional webhooks endpoints 

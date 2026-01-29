@@ -20,6 +20,10 @@ SMTP_PROVIDERS = {
     "icloud.com": ("smtp.mail.me.com", 587, False),
 }
 
+AVAILABLE_WEBHOOKS = {
+    "discord" : "https://discord.com/api/webhooks/" # The discord webhook prefix
+}
+
 WEEKDAY_NAMES = {
     "0": "Sunday",
     "1": "Monday",
@@ -44,4 +48,12 @@ MONTH_NAMES = {
     "10": "October",
     "11": "November",
     "12": "December",
+}
+
+COMMON_4XX_STATUS_CODE = {
+    400: "Webhook endpoint rejected the request (400 Bad Request)",
+    401: "Webhook endpoint requires authentication (401 Unauthorized)",
+    403: "Webhook endpoint denied access (403 Forbidden)",
+    404: "Webhook endpoint not found (404)",
+    408: "Webhook endpoint request timed out (408)"
 }

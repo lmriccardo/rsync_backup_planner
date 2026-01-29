@@ -3,14 +3,16 @@ from __future__ import annotations
 import croniter
 import yaml
 import os
+import re
 
-from backupctl.constants import SMTP_PROVIDERS
+from backupctl.constants import SMTP_PROVIDERS, AVAILABLE_WEBHOOKS
 from backupctl.models.rsync import DeleteType
+from backupctl.models.notification import NotifType, EventType
 from pathlib import Path
-from typing import Optional, List, Union, Dict
+from typing import Optional, List, Union, Dict, Any
 from pydantic import (
-    BaseModel, Field, ConfigDict, EmailStr,
-    field_validator, model_validator
+    BaseModel, Field, ConfigDict, EmailStr, HttpUrl,
+    PrivateAttr, field_validator, model_validator
 )
 
 CronField = Optional[Union[int,str]]
@@ -141,9 +143,49 @@ class EmailCfg(BaseModel):
         server, port, ssl = SMTP_PROVIDERS[domain]
         self.smtp = SMTP_Cfg(server=server, port=port, ssl=ssl)
         return self
+    
+class WebhookCfg(BaseModel):
+    model_config = ConfigDict(extra="forbid", 
+                              populated_by_name=True, 
+                              validate_default=True)
+    
+    type_  : NotifType = Field(alias="type")               # The type of the webhook endpoint
+    name   : str                                           # The name given to the webhook
+    url    : HttpUrl                                       # The URL endpoint for the webhook
+    events : List[EventType] = Field(default_factory=list, min_length=1) # List of subscribed events
+    timeout: Optional[str] = None                          # Optional timeout for retrying
+    headers: Optional[Dict[str,Any]] = None                # Optional additional headers for the HTTP request
+
+    # Non configurable fields. Those can be filled after validation
+    _timeout_s : Optional[int] = PrivateAttr( default=None )
+
+    @field_validator("timeout", mode="before")
+    @classmethod
+    def validate_timeout( cls, v: str | None ) -> str:
+        """ Validate timeout field formatting structure """
+        if v is None: return v # None value can be provided
+        # This regex, matches scientific notation and time notation
+        pattern = re.compile(r"^(\d+)(?:\.(\d+))?(?:e(\d+))?(s|ms|us)$")
+        match = re.fullmatch( pattern, v )
+        if match is None:
+            raise ValueError(f"Incorrect formatting for timeout field {v}")
+        return v
+    
+    @model_validator(mode="after")
+    def set_timeout_s(self) -> 'WebhookCfg':
+        """ Set the timeout seconds fields from the timeout """
+        pattern = re.compile(r"^(\d+)(?:\.(\d+))?(?:e(\d+))?(s|ms|us)$")
+        units, decs, exp, time_unit = re.fullmatch( pattern, self.timeout ).groups()
+        result = int(units)
+        if decs is not None: result += int( decs ) / 10
+        if exp is not None: result *= 10**int(exp)
+        result /= ( { "s" : 1, "ms" : 1000, "us": 1e6 }[time_unit] )
+        self._timeout_s = result
+        return self
 
 class NotificationCfg(BaseModel):
     email: Optional[EmailCfg] = None # Optional email notification system
+    webhooks: Optional[List[WebhookCfg]] = None # Optional list of webhooks endpoints
 
 class Target(BaseModel):
     model_config = ConfigDict(extra="forbid")
