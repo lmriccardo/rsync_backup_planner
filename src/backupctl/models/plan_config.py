@@ -3,49 +3,16 @@ from __future__ import annotations
 import backupctl.models.user_config as user_cfg
 import json
 
+from dataclasses import dataclass, field
+from typing import List, Dict, Any
+from pathlib import Path
+
 from backupctl.constants import DEFAULT_LOG_FOLDER
 from backupctl.utils.rsync import create_rsync_command
 from backupctl.utils.dataclass import *
-from dataclasses import dataclass, field
-from typing import List, TypeAlias, Union, Dict, Any
-from pathlib import Path
-
-class NotificationType(str, Enum):
-    email   = "email"
-    webhook = "webhook"
-
-@dataclass
-class NotificationMeta:
-    id   : int # The id of the current notification system
-    type : NotificationType # The type of the current notification system
-
-@dataclass
-class EmailNotification(NotificationMeta, DictConfiguration, PrintableConfiguration):
-    from_    : str # The email sender
-    password : str # The user password
-    server   : str # The server hostname or ip address
-    port     : int # The remote port on which the server is listening
-    ssl      : bool # If the SMTP server support SSL
-    to       : List[str] = field(default_factory=list) # A list of recipients
-
-    @staticmethod
-    def from_notification(id_: int, notif: user_cfg.EmailCfg) -> 'EmailNotification':
-        """ Creates an object from the Email user configuration """
-        return EmailNotification(
-            id=id_, type=NotificationType.email,
-            from_=notif.from_, to=notif.to,
-            password=notif.password, server=notif.smtp.server,
-            port=notif.smtp.port, ssl=notif.smtp.ssl
-        )
-
-@dataclass
-class WebhookNotification(NotificationMeta, DictConfiguration, PrintableConfiguration):
-    ...
-
-NotificationCls: TypeAlias = Union[
-    EmailNotification,
-    WebhookNotification
-]
+from backupctl.models.notification import NotificationCls
+from backupctl.models.notification.email import EmailNotification
+from backupctl.models.notification.webhook import WebhookNotification
 
 @dataclass
 class PlanCfg(DictConfiguration, PrintableConfiguration):
@@ -91,8 +58,9 @@ def load_from_target( target: user_cfg.Target ) -> PlanCfg:
         progress=target.rsync.options.show_progress, includes=target.rsync.includes,
         verbose=target.rsync.options.verbose, exclude_from=target.rsync.exclude_from, 
         sources=target.rsync.sources, use_flags=True,
-        delete=target.rsync.options.delete, 
-        itemize_changes=target.rsync.options.itemize_changes
+        delete=target.rsync.options.delete, itemize_changes=target.rsync.options.itemize_changes,
+        keep_specials=target.rsync.options.keep_specials,
+        keep_devices=target.rsync.options.keep_devices
     )
 
     # Now we need to put only those notification system that
@@ -102,9 +70,18 @@ def load_from_target( target: user_cfg.Target ) -> PlanCfg:
 
     if target.notification.email is not None:
         curr_ns_identifier += 1
-        cfg.notification.append(EmailNotification.from_notification(
+        cfg.notification.append(EmailNotification.from_configuration(
             curr_ns_identifier, target.notification.email
         ))
+
+    if target.notification.webhooks is not None:
+        for webhook_ntfy in target.notification.webhooks:
+            curr_ns_identifier += 1
+            cfg.notification.append(
+                WebhookNotification.from_configuration(
+                    curr_ns_identifier, webhook_ntfy
+                )
+            )
 
     return cfg
 

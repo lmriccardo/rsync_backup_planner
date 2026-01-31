@@ -1,23 +1,16 @@
 import subprocess
-import smtplib
-import ssl
 import sys
 
-from backupctl.models.plan_config import (
-    PlanCfg, load_plan_configuration,
-    NotificationCls, EmailNotification,
-    WebhookNotification
-)
-
-from backupctl.constants import (
-    DEFAULT_PLAN_CONF_FOLDER,
-    DEFAULT_PLAN_SUFFIX
-)
-
-from email.message import EmailMessage
 from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
+
+from backupctl.models.plan_config import PlanCfg, load_plan_configuration
+from backupctl.constants import DEFAULT_PLAN_CONF_FOLDER, DEFAULT_PLAN_SUFFIX
+from backupctl.models.notification import NotificationCls, Event, EventType
+from backupctl.models.notification.email import EmailNotification, Emailer
+from backupctl.models.notification.webhook import WebhookNotification
+from backupctl.models.notification.wh_dispatcher import WebhookDispatcher
 
 def make_log_file(conf: PlanCfg, suffix: str = ".log") -> Path:
     """ Create the log file into the input base folder """
@@ -28,7 +21,7 @@ def make_log_file(conf: PlanCfg, suffix: str = ".log") -> Path:
     log_file.touch(exist_ok=True)
     return log_file
 
-def run_backup_command( command: List[str], log_file: Path | None ) -> str:
+def run_backup_command( command: List[str], log_file: Path | None ) -> Tuple[bool, str]:
     started = datetime.now()
 
     try:
@@ -82,47 +75,48 @@ def run_backup_command( command: List[str], log_file: Path | None ) -> str:
                 f"Error    : {type(e).__name__}: {e}"
             )
     
-def send_email_smtp( 
-    config: EmailNotification, subject: str, body: str,
-    attachments: List[Path] = []
-) -> None:
-    """ Sends an email using the SMTP service """
-    msg = EmailMessage()
-    msg["From"] = config.from_
-    msg["To"] = config.to
-    msg["Subject"] = subject
-    msg.set_content(body)
-
-    for attachment in attachments:
-        data = attachment.read_bytes()
-        msg.add_attachment( data, maintype="application", 
-            subtype="octet-stream", filename=attachment.name)
-        
-    ctx = ssl.create_default_context()
-        
-    if config.ssl:
-        server = smtplib.SMTP_SSL(config.server, config.port, context=ctx)
-    else:
-        server = smtplib.SMTP(config.server, config.port)
-        server.starttls(context=ctx)
-
-    with server:
-        server.login(config.from_, config.password)
-        server.send_message(msg)
-    
 def send_notification( 
-    notification_cfg: List[NotificationCls], title: str, 
-    summary: str, log_file: Path | None
+    notification_cfg: List[NotificationCls], event: Event, log_file: Path | None
 ) -> None:
     """ Sends notifications """
-    for notification_system in notification_cfg:
-        if isinstance(notification_system, EmailNotification):
-            send_email_smtp(notification_system,subject=title,
-                body=summary,attachments=[log_file])
-            
-            continue
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    subject = f"[Backup: {event.name}] {'OK' if event.ok() else 'FAILED'} ({now})"
+    attachments=[log_file] if log_file is not None else []
 
-        # Otherwise it is using webhooks
+    emailer_ = None
+    notification_failures = dict()
+
+    for notification_system in notification_cfg:
+        if isinstance(notification_system, WebhookNotification):
+            if event.event not in notification_system.events: continue
+            
+            ntfy_name = notification_system.name
+            error = WebhookDispatcher.dispatch( notification_system, event ) \
+                                     .send( subject, attachments )
+            
+            notification_failures[ ntfy_name ] = error
+
+        if isinstance(notification_system, EmailNotification):
+            emailer_ = Emailer.new(notification_system, event)
+
+    # If the dictionary is not empty we need to report notification
+    # failures into the log file
+    if log_file is not None and len(notification_failures) > 0:
+        log = sys.stdout if not log_file else log_file.open("+a", encoding="utf-8")
+        log.write("\n---------- NOTIFICATION SYSTEM FAILURES ----------\n")
+        
+        # Log all the notification errors
+        for name, message in notification_failures.items():
+            log.write(f"[NOTIFICATION SYS: {name}] Failed with message: {message}")
+        
+        log.flush()
+
+        # Close the stream if the iostream was a file
+        if log_file is not None: log.close()
+    
+    # Emails are sent at the end also reporting errors in the log
+    # file with any previous notification system failed
+    emailer_.send( subject, attachments )
 
 def run_job( 
     target: str, dry_run: bool, notification_en: bool, logging_en: bool 
@@ -145,23 +139,22 @@ def run_job(
     # corresponding option into the list of commands
     if dry_run: plan_configuration.command.insert(-2, "--dry-run")
     print("[*] Running the job ...")
-    ok, summary = run_backup_command( 
-        plan_configuration.command, file_log_path )
-
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    name = plan_configuration.name
-    subject = f"[Backup: {name}] {'OK' if ok else 'FAILED'} ({now})"
+    ok, summary = run_backup_command( plan_configuration.command, file_log_path )
+    event_type = EventType.on_success if ok else EventType.on_failure
+    event = Event( plan_configuration.name, event_type, summary )
 
     if notification_en:
         print("[*] Sending notifications")
         notification_list = plan_configuration.notification
-        send_notification(notification_list, subject,
-            summary, file_log_path)
-        
+        send_notification(notification_list, event, file_log_path)
         return
+    
+    # If notifications are disabled then printout content on screeen
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    subject = f"[Backup: {event.name}] {'OK' if event.ok() else 'FAILED'} ({now})"
     
     print()
     print("-" * 100)
     print(subject)
     print("-" * 100, end="\n\n")
-    print(summary)
+    print(event.summary)

@@ -70,8 +70,7 @@ def format_version() -> None:
 
     # Print the current version
     print(f"Backupctl Version {curr_version} (", end="")
-    curr_t = "Not Yet Released" if curr_version_time is None \
-        else str(curr_version_time)
+    curr_t = "Not Yet Released" if curr_version_time is None else str(curr_version_time)
     print(f"{curr_t})")
 
     # Print if there is a more recent version

@@ -491,6 +491,19 @@
           "default": null,
           "title": "Timeout"
         },
+        "max_retries": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Retries"
+        },
         "headers": {
           "anyOf": [
             {

@@ -5,15 +5,12 @@ import yaml
 import os
 import re
 
-from backupctl.constants import SMTP_PROVIDERS, AVAILABLE_WEBHOOKS
 from backupctl.models.rsync import DeleteType
-from backupctl.models.notification import NotifType, EventType
+from backupctl.models.notification.webhook import WebhookCfg
+from backupctl.models.notification.email import EmailCfg
 from pathlib import Path
-from typing import Optional, List, Union, Dict, Any
-from pydantic import (
-    BaseModel, Field, ConfigDict, EmailStr, HttpUrl,
-    PrivateAttr, field_validator, model_validator
-)
+from typing import Optional, List, Union, Dict
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 
 CronField = Optional[Union[int,str]]
 
@@ -114,74 +111,6 @@ class Schedule(BaseModel):
     def to_cron(self) -> str:
         """ Returns crons representation of the schedule """
         return f"{self.minute} {self.hour} {self.day} {self.month} {self.weekday}"
-    
-class SMTP_Cfg(BaseModel):
-    server: str
-    port: Optional[int] = Field(default=None, ge=1, le=65535)
-    ssl: bool = False
-
-class EmailCfg(BaseModel):
-    model_config = ConfigDict(extra="forbid", populated_by_name=True)
-
-    from_: EmailStr = Field(alias="from") # The sender email
-    to: List[EmailStr]
-    password: str # The SMTP password for the email
-    smtp: Optional[SMTP_Cfg] = None # Optional SMTP server
-
-    @model_validator(mode="after")
-    def fill_smtp_defaults(self) -> EmailCfg:
-        """ Fills the stmp section with defaults parameter
-        from the detected SMTP domain if inferred. """
-        if self.smtp is not None: return self
-        domain = self.from_.split("@")[-1]
-        if domain not in SMTP_PROVIDERS:
-            raise ValueError(
-                f"No SMTP defaults for '{domain}'. "
-                "Please specify smtp.server and smtp.port explicitly."
-            )
-        
-        server, port, ssl = SMTP_PROVIDERS[domain]
-        self.smtp = SMTP_Cfg(server=server, port=port, ssl=ssl)
-        return self
-    
-class WebhookCfg(BaseModel):
-    model_config = ConfigDict(extra="forbid", 
-                              populated_by_name=True, 
-                              validate_default=True)
-    
-    type_  : NotifType = Field(alias="type")               # The type of the webhook endpoint
-    name   : str                                           # The name given to the webhook
-    url    : HttpUrl                                       # The URL endpoint for the webhook
-    events : List[EventType] = Field(default_factory=list, min_length=1) # List of subscribed events
-    timeout: Optional[str] = None                          # Optional timeout for retrying
-    headers: Optional[Dict[str,Any]] = None                # Optional additional headers for the HTTP request
-
-    # Non configurable fields. Those can be filled after validation
-    _timeout_s : Optional[int] = PrivateAttr( default=None )
-
-    @field_validator("timeout", mode="before")
-    @classmethod
-    def validate_timeout( cls, v: str | None ) -> str:
-        """ Validate timeout field formatting structure """
-        if v is None: return v # None value can be provided
-        # This regex, matches scientific notation and time notation
-        pattern = re.compile(r"^(\d+)(?:\.(\d+))?(?:e(\d+))?(s|ms|us)$")
-        match = re.fullmatch( pattern, v )
-        if match is None:
-            raise ValueError(f"Incorrect formatting for timeout field {v}")
-        return v
-    
-    @model_validator(mode="after")
-    def set_timeout_s(self) -> 'WebhookCfg':
-        """ Set the timeout seconds fields from the timeout """
-        pattern = re.compile(r"^(\d+)(?:\.(\d+))?(?:e(\d+))?(s|ms|us)$")
-        units, decs, exp, time_unit = re.fullmatch( pattern, self.timeout ).groups()
-        result = int(units)
-        if decs is not None: result += int( decs ) / 10
-        if exp is not None: result *= 10**int(exp)
-        result /= ( { "s" : 1, "ms" : 1000, "us": 1e6 }[time_unit] )
-        self._timeout_s = result
-        return self
 
 class NotificationCfg(BaseModel):
     email: Optional[EmailCfg] = None # Optional email notification system

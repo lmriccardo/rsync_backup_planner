@@ -184,11 +184,14 @@ backup:
             # Subscribed Events: failure, success
             # [OPTIONAL, default=all events]
             events: [ failure ]
-            # Timeout for retrying sending the notification.
-            # Value can be expressed in seconds (s), milliseconds (ms),
-            # microseconds (us) and that's it.
-            # [OPTIONAL, default=no timeout, no retrying]
+            # Timeout for receiving the response after sending the notification.
+            # Value can be expressed in seconds (s), milliseconds (ms)
+            # and microseconds (us).
+            # [OPTIONAL, default=no timeout, wait until response arrive]
             timeout: 5s
+            # Maximum number of retries
+            # [OPTIONAL, default=0]
+            max_retries: 2
             # Additional headers used for the requests, such 
             # as Authentication and Authorization tokens
             # [OPTIONAL, default=null]

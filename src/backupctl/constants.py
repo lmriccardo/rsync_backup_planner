@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from enum import Enum
 
 CURR_PATH                = Path(os.getcwd()).absolute()
 HOME_PATH                = Path.home().absolute()
@@ -57,3 +58,5 @@ COMMON_4XX_STATUS_CODE = {
     404: "Webhook endpoint not found (404)",
     408: "Webhook endpoint request timed out (408)"
 }
+
+HTTP_RETRY_STATUS = {408, 429, 500, 502, 503, 504}
