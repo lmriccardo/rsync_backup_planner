@@ -109,11 +109,11 @@ def create_cronjob( name: str, backup_conf_path: Path, schedule: Schedule, args:
     current_job = Job( name, cron_command, JobStatusType.enabled )
 
     if name in registered:
-        current_job = registered[name]
+        registered_job = registered[name]
         if args.verbose:
             print(f"[*] Automation Task {name} already registered")
-            print(f"    Registry Command: {cron_command}")
-            print(f"    Registry Status : {current_job.status.value}")
+            print(f"    Registry Command: {registered_job.cmd}")
+            print(f"    Registry Status : {registered_job.status.value}")
             print(f"\n[*] Checking consistency with the crontab list")
     else:
         if args.verbose:
