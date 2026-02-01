@@ -15,6 +15,7 @@ from backupctl.constants import HTTP_RETRY_STATUS, AVAILABLE_WEBHOOKS
 from backupctl.utils.dataclass import DictConfiguration, PrintableConfiguration
 
 HttpRequest: TypeAlias = requests.Request
+HttpResponse: TypeAlias = requests.Response
 
 def _validate_timeout_str( v: Optional[str] ) -> Optional[str]:
     """ Validate the timeout string """
@@ -93,6 +94,11 @@ class WebhookNotification(NotificationMeta, DictConfiguration, PrintableConfigur
             headers=notif.headers
         )
     
+@dataclass
+class WebhookStatus:
+    response : Optional[HttpResponse] # The most recent HTTP Response
+    error    : Optional[str]          # The error message if any
+    
 class Webhook(ABC, WebhookNotification):
     def __init__( self, event: Event, **kwargs ):
         super().__init__( **kwargs )
@@ -105,33 +111,36 @@ class Webhook(ABC, WebhookNotification):
     def get_content( self, subject: str ) -> str:
         return f"{subject}\n{self.event.summary}"
     
-    def send( self, subject: str, attachments: List[Path] | None ) -> str | None:
+    @abstractmethod
+    def send( self, subject: str, attachments: List[Path] | None ) -> WebhookStatus:
         """ Creates and sends the requests """
         request = self.format_request( subject, attachments )
         last_error: str | None = None # The error returned by the send function
+        last_response: HttpResponse | None = None # The last returned response
+
         session = sessions.Session()
         for attempt in range(1, self.max_retries + 1):
             try:
                 prep_req = session.prepare_request( request )
-                response = session.send(
+                last_response = session.send(
                     prep_req, allow_redirects=True, timeout=self.timeout_s
                 )
                 
                 # Wait for the response to arrive. When it is arrived check
                 # its status. Some status codes permit retryies, while
                 # for some others we shall fail fast
-                if response.ok: break
+                if last_response.ok: break
                 
                 last_error = (
-                    f"Webhook request failed with HTTP {response.status_code}: "
-                    f"{response.reason}"
+                    f"Webhook request failed with HTTP {last_response.status_code}: "
+                    f"{last_response.reason}"
                 )
 
-                if response.status_code in HTTP_RETRY_STATUS:
+                if last_response.status_code in HTTP_RETRY_STATUS:
                     retry_sleep_time = self.backoff( attempt )
                     if (
-                            response.status_code == 429 \
-                        and ( ra := response.headers.get("Retry-After") ) is not None
+                            last_response.status_code == 429 \
+                        and ( ra := last_response.headers.get("Retry-After") ) is not None
                     ):
                         retry_sleep_time = ra
                     
@@ -152,10 +161,13 @@ class Webhook(ABC, WebhookNotification):
             except requests.RequestException as e:
                 last_error = f"Unexpected error while sending webhook: {e}"
                 break
+            
+            except Exception:
+                ...
         
         # Close the session before returning
         session.close()
-        return last_error or "Webhook request failed for unknown reason"
+        return WebhookStatus( last_response, last_error )
 
     @staticmethod
     def backoff(attempt: int) -> float:

@@ -91,10 +91,12 @@ def send_notification(
             if event.event not in notification_system.events: continue
             
             ntfy_name = notification_system.name
-            error = WebhookDispatcher.dispatch( notification_system, event ) \
-                                     .send( subject, attachments )
+            status = WebhookDispatcher.dispatch( notification_system, event ) \
+                                      .send( subject, attachments )
             
-            notification_failures[ ntfy_name ] = error
+            # Save the error only if it is an actual string
+            if status.error is not None:
+                notification_failures[ ntfy_name ] = status.error
 
         if isinstance(notification_system, EmailNotification):
             emailer_ = Emailer.new(notification_system, event)
@@ -116,7 +118,8 @@ def send_notification(
     
     # Emails are sent at the end also reporting errors in the log
     # file with any previous notification system failed
-    emailer_.send( subject, attachments )
+    if emailer_ is not None: 
+        emailer_.send( subject, attachments )
 
 def run_job( 
     target: str, dry_run: bool, notification_en: bool, logging_en: bool 
