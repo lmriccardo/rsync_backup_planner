@@ -55,7 +55,7 @@ else
 fi
 
 printf "%b\n" "[*] Installing project dependencies"
-python3 -m pip install -r requirements.txt >/dev/null || error_check
+python3 -m pip install -r requirements.lock >/dev/null || error_check
 
 # Check that PyInstaller is installed (import check)
 printf "%b" "[*] Checking if \"PyInstaller\" package is installed... "
