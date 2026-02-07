@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from enum import Enum
 
 CURR_PATH                = Path(os.getcwd()).absolute()
 HOME_PATH                = Path.home().absolute()
@@ -18,6 +19,10 @@ SMTP_PROVIDERS = {
     "outlook.com": ("smtp.office365.com", 587, False),
     "yahoo.com":  ("smtp.mail.yahoo.com", 465, True),
     "icloud.com": ("smtp.mail.me.com", 587, False),
+}
+
+AVAILABLE_WEBHOOKS = {
+    "discord" : "https://discord.com/api/webhooks/" # The discord webhook prefix
 }
 
 WEEKDAY_NAMES = {
@@ -45,3 +50,13 @@ MONTH_NAMES = {
     "11": "November",
     "12": "December",
 }
+
+COMMON_4XX_STATUS_CODE = {
+    400: "Webhook endpoint rejected the request (400 Bad Request)",
+    401: "Webhook endpoint requires authentication (401 Unauthorized)",
+    403: "Webhook endpoint denied access (403 Forbidden)",
+    404: "Webhook endpoint not found (404)",
+    408: "Webhook endpoint request timed out (408)"
+}
+
+HTTP_RETRY_STATUS = {408, 429, 500, 502, 503, 504}

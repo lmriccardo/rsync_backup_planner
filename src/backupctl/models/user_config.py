@@ -3,15 +3,14 @@ from __future__ import annotations
 import croniter
 import yaml
 import os
+import re
 
-from backupctl.constants import SMTP_PROVIDERS
 from backupctl.models.rsync import DeleteType
+from backupctl.models.notification.webhook import WebhookCfg
+from backupctl.models.notification.email import EmailCfg
 from pathlib import Path
 from typing import Optional, List, Union, Dict
-from pydantic import (
-    BaseModel, Field, ConfigDict, EmailStr,
-    field_validator, model_validator
-)
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 
 CronField = Optional[Union[int,str]]
 
@@ -112,38 +111,14 @@ class Schedule(BaseModel):
     def to_cron(self) -> str:
         """ Returns crons representation of the schedule """
         return f"{self.minute} {self.hour} {self.day} {self.month} {self.weekday}"
-    
-class SMTP_Cfg(BaseModel):
-    server: str
-    port: Optional[int] = Field(default=None, ge=1, le=65535)
-    ssl: bool = False
-
-class EmailCfg(BaseModel):
-    model_config = ConfigDict(extra="forbid", populated_by_name=True)
-
-    from_: EmailStr = Field(alias="from") # The sender email
-    to: List[EmailStr]
-    password: str # The SMTP password for the email
-    smtp: Optional[SMTP_Cfg] = None # Optional SMTP server
-
-    @model_validator(mode="after")
-    def fill_smtp_defaults(self) -> EmailCfg:
-        """ Fills the stmp section with defaults parameter
-        from the detected SMTP domain if inferred. """
-        if self.smtp is not None: return self
-        domain = self.from_.split("@")[-1]
-        if domain not in SMTP_PROVIDERS:
-            raise ValueError(
-                f"No SMTP defaults for '{domain}'. "
-                "Please specify smtp.server and smtp.port explicitly."
-            )
-        
-        server, port, ssl = SMTP_PROVIDERS[domain]
-        self.smtp = SMTP_Cfg(server=server, port=port, ssl=ssl)
-        return self
 
 class NotificationCfg(BaseModel):
     email: Optional[EmailCfg] = None # Optional email notification system
+    webhooks: Optional[List[WebhookCfg]] = None # Optional list of webhooks endpoints
+
+class LogRetentionCfg(BaseModel):
+    max_spare_files  : int = Field( ge=1 ) # Maximum number of spare files before being archived
+    retention_window : int = Field( ge=1 ) # Retention window in days for compressed batch of files.
 
 class Target(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -152,6 +127,9 @@ class Target(BaseModel):
     rsync: RsyncCfg # rsync configuration
     schedule: Schedule # Schedule configuration
     notification: Optional[NotificationCfg]=None # The optional notification system
+    log_retention: Optional[LogRetentionCfg] = LogRetentionCfg(
+        max_spare_files=10, retention_window=7
+    )
 
 class NamedTarget(Target):
     """ Just a wrapper around target that also includes the name """

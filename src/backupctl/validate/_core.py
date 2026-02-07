@@ -1,11 +1,14 @@
 import backupctl.models.user_config as user_cfg
 import socket
 import os
+import requests
 
+from backupctl.constants import COMMON_4XX_STATUS_CODE
 from backupctl.models.rsync import RSyncStatus
 from backupctl.utils.rsync import run_rsync_command
 from backupctl.models.user_config import *
 from backupctl.models.filesystem import *
+from backupctl.utils.console import cerror, cinfo, cwarn
 from backupctl.utils.exceptions import (
     BackupCtlError,
     InputValidationError,
@@ -56,13 +59,13 @@ def check_sock_connection( remote: Remote, args: Args ) -> bool:
         remote_ip = socket.gethostbyname(remote.host)
     except OSError:
         if args.verbose:
-            print(
+            cwarn(
                 f"  (NO) Checking connection to {remote.host} ({remote_ip}) on {remote.port}"
             )
         return False
 
     if args.verbose:
-        print(
+        cinfo(
             f"  ( ) Checking connection to {remote.host} ({remote_ip}) on {remote.port}",
             end="",
         )
@@ -76,7 +79,7 @@ def check_sock_connection( remote: Remote, args: Args ) -> bool:
 
     if args.verbose:
         result_str = "OK" if result else "NO"
-        print(
+        cinfo(
             f"\r  ({result_str}) Checking connection to {remote.host} ({remote_ip}) on {remote.port}"
         )
 
@@ -114,13 +117,13 @@ def check_remote_module_auth( remote: Remote, args: Args ) -> None:
     status = _check_rsync_module_auth( remote )
 
     if args.verbose:
-        print("  [--] Remote module and folder authentication")
+        cinfo("  [--] Remote module and folder authentication")
         
     # Module exists
     inner_result = status != RSyncStatus.UNKNOWN_MODULE
     result_str = "OK" if inner_result else "NO"
 
-    if args.verbose: print(f"    ({result_str}) Checking for remote module: {remote.dest.module}")
+    if args.verbose: cinfo(f"    ({result_str}) Checking for remote module: {remote.dest.module}")
     ensure(inner_result, "Destination Module not found", InputValidationError)
 
     # Authentication check
@@ -131,7 +134,7 @@ def check_remote_module_auth( remote: Remote, args: Args ) -> None:
         password_file=Path(remote.password_file).absolute().__str__()
     
     if args.verbose:
-        print((
+        cinfo((
             f"    ({result_str}) Checking auth with username " +
             ("<empty>" if not remote.user else remote.user) +
             f" and password file {password_file}"
@@ -144,7 +147,7 @@ def check_remote_module_auth( remote: Remote, args: Args ) -> None:
     result_str = "OK" if inner_result else "NO"
 
     if args.verbose:
-        print(f"    ({result_str}) Checking for remote folder: {remote.dest.module}/{remote.dest.folder}")
+        cinfo(f"    ({result_str}) Checking for remote folder: {remote.dest.module}/{remote.dest.folder}")
     
     ensure(inner_result, "Destination Folder not found", InputValidationError)
 
@@ -156,17 +159,17 @@ def check_remote_dest(remote: Remote, args: Args) -> bool:
 def check_exclude_file( rsync: RsyncCfg, args: Args ) -> bool:
     """ Checks if the exclude file if given exists in the filesystem """
     if not rsync.exclude_from: return True
-    if args.verbose: print("  ( ) Checking existence of {rsync.exclude_from}", end="")
+    if args.verbose: cinfo("  ( ) Checking existence of {rsync.exclude_from}", end="")
     result = Path(rsync.exclude_from).absolute().is_file()
     result_str = "OK" if result else "NO"
     if args.verbose: 
-        print(f"\r  ({result_str}) Checking existence of {rsync.exclude_from}")
+        cinfo(f"\r  ({result_str}) Checking existence of {rsync.exclude_from}")
     return result
 
 def check_rsync_source_folders( rsync: RsyncCfg, args: Args ) -> None:
     """ Checks if all source folders exists in the current filesystem """
     if args.verbose:
-        print("  [--] Checking existence and readability of all source folders in the configuration")
+        cinfo("  [--] Checking existence and readability of all source folders in the configuration")
     
     for source_folder in rsync.sources:
         source_folder_path = Path( source_folder ).resolve()
@@ -175,11 +178,11 @@ def check_rsync_source_folders( rsync: RsyncCfg, args: Args ) -> None:
         result_str = "OK" if result else "NO"
 
         if args.verbose:
-            print(f"    ({result_str}) Checking source folder {source_folder_path}")
+            cinfo(f"    ({result_str}) Checking source folder {source_folder_path}")
             if not can_read:
-                print()
+                cinfo("")
                 print_permission_error( source_folder_path )
-                print()
+                cinfo("")
 
         ensure(
             result,
@@ -219,9 +222,34 @@ def check_email_notification_system( email_ntify: EmailCfg, args: Args ) -> Opti
     
     if args.verbose:
         result_str = "OK" if not error else "NO"
-        print(f"    ({result_str}) Checking SMTP Server Authentication")
+        cinfo(f"    ({result_str}) Checking SMTP Server Authentication")
 
     return error
+
+def check_webhook_notification_system( webhook_ntfy: WebhookCfg, args: Args ) -> Optional[str]:
+    """ Check if the endpoint is reachable """
+    # Performs a simple GET request on the requested url
+    try:
+        response = requests.get( webhook_ntfy.url, headers=webhook_ntfy.headers, allow_redirects=True )
+    except requests.exceptions.Timeout:
+        return "Webhook endpoint timed out"
+    except requests.exceptions.ConnectionError:
+        return "Webhook endpoint is unreachable"
+    except requests.RequestException as exc:
+        return f"Webhook request failed: {exc}"
+    
+    status = response.status_code
+
+    if 200 <= status < 300:
+        return None
+    
+    if status in COMMON_4XX_STATUS_CODE:
+        return COMMON_4XX_STATUS_CODE[status]
+
+    if 500 <= status < 600:
+        return f"Webhook endpoint server error ({status})"
+
+    return f"Webhook endpoint returned unexpected status code ({status})"
 
 def check_notification_system( notification: NotificationCfg, args: Args ) -> None:
     """ Checks the correctness of the notification system configuration
@@ -229,7 +257,7 @@ def check_notification_system( notification: NotificationCfg, args: Args ) -> No
     successful notification system but, if none is reachable, then raise
     a validation error and exit. """
     if args.verbose:
-        print("  [--] Notification system checks")
+        cinfo("  [--] Notification system checks")
 
     errors = defaultdict(str)
 
@@ -240,7 +268,11 @@ def check_notification_system( notification: NotificationCfg, args: Args ) -> No
         errors["email"] = error
 
     # Check for webhooks notification system if provided
-    # ...
+    if notification.webhooks is not None:
+        for idx, webhook_config in enumerate( notification.webhooks ):
+            error = check_webhook_notification_system( webhook_config, args )
+            if error is not None: notification.webhooks[idx] = None
+            errors[f"webhook_{idx+1}"] = error
         
     if any( errors.values() ) and args.verbose:
         error_msg = "\n[WARNING] Notification System Errors:\n  "
@@ -248,7 +280,7 @@ def check_notification_system( notification: NotificationCfg, args: Args ) -> No
             lambda e: f"  - ({e[0]}) {e[1]}", 
             errors.items() ) )
         
-        print(error_msg)
+        cwarn(error_msg)
 
 def validate_target( target: user_cfg.NamedTarget, args: Args ) -> None:
     """ Validates a single target against some checks """
@@ -267,7 +299,7 @@ def validate_configuration( config: user_cfg.YAML_Conf ) -> int:
     """ Validates all targets in the user provided configuration """
     # If there are no targets, skip
     if not config.backup.targets:
-        print("No Targets to be validated")
+        cwarn("No Targets to be validated")
         return
     
     args = Args(None, False) # Some additional arguments
@@ -275,13 +307,13 @@ def validate_configuration( config: user_cfg.YAML_Conf ) -> int:
 
     for target_name, target in config.backup.targets.items():
         try:
-            print(f"- (  ) Validating Target {target_name}", end="", flush=True)
+            cinfo(f"- (  ) Validating Target {target_name}", end="", flush=True)
             target_with_name = user_cfg.NamedTarget.from_target(target_name, target)
             validate_target( target_with_name, args )
-            print(f"\r- (OK) Validation completed for Target {target_name}")
+            csuccess(f"\r- (OK) Validation completed for Target {target_name}")
         except BackupCtlError as e:
-            print(f"\r- (NO) Validation completed for Target {target_name}")
-            print(f"[ERROR] {e}")
+            cwarn(f"\r- (NO) Validation completed for Target {target_name}")
+            cerror(f"[ERROR] {e}")
             exit_code = 1
     
     return exit_code

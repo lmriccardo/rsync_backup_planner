@@ -1,6 +1,7 @@
 from typing import Callable, Type
 from functools import wraps
 
+from backupctl.utils.console import cerror
 
 class BackupCtlError(Exception):
     """Base class for expected backupctl errors."""
@@ -27,7 +28,7 @@ def assertion_wrapper(fn: Callable) -> Callable:
         try:
             return fn(*args, **kwargs)
         except BackupCtlError as err:
-            print(f"[ERROR] {err}")
+            cerror(f"[ERROR] {err}")
             return False
 
     return wrapper

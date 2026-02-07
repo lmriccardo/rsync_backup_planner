@@ -1,6 +1,7 @@
 import argparse
 
 from ._core import list_tasks
+from backupctl.utils.console import cerror
 
 def run( args: argparse.Namespace ) -> None:
     try:
@@ -24,5 +25,5 @@ def run( args: argparse.Namespace ) -> None:
         return 0
 
     except Exception as e:
-        print(f"[ERROR] {e}")
+        cerror(f"[ERROR] {e}")
         return 1

@@ -15,23 +15,24 @@ from ._core import parse_input_arguments, \
     Args, \
     load_user_configuration, \
     create_backups
+from backupctl.utils.console import cerror, cinfo
 
 def run( args: argparse.Namespace ) -> None:
     # Parse the input arguments
     args: Args = parse_input_arguments( args )
 
     # Load the configuration
-    print(f"[*] Loading configuration from {args.config_file}")
+    cinfo(f"[*] Loading configuration from {args.config_file}")
     conf = load_user_configuration( args.config_file )
     if conf.backup.targets and args.verbose:
-        print(f"[*] Available Targets are: ", end="")
-        print(", ".join(list(conf.backup.targets.keys())))
+        cinfo("[*] Available Targets are: ", end="")
+        cinfo(", ".join(list(conf.backup.targets.keys())))
     
     if not conf.backup.targets:
-        print("No available targets")
+        cerror("No available targets")
         return 0
     
-    print("[*] Creating backups plans")
+    cinfo("[*] Creating backups plans")
     create_backups( conf, args )
 
     return 0
