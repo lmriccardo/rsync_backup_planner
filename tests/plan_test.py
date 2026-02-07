@@ -37,6 +37,6 @@ def test_plan_generation(tmp_path: Path) -> None:
     plan = load_from_target(named)
 
     assert plan.name == "sample"
-    assert plan.log.endswith("/sample")
+    assert plan.log.path.endswith("/sample")
     assert isinstance(plan.command, list)
     assert plan.command[0] == "rsync"
