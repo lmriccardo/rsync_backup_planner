@@ -20,6 +20,7 @@ from backupctl.models.user_config import *
 from backupctl.models.registry import *
 from backupctl.constants import *
 from backupctl.utils.cron import *
+from backupctl.utils.console import cerror, cinfo
 
 @assertion_wrapper
 def parse_input_arguments( args: argparse.Namespace ) -> Args:
@@ -88,7 +89,7 @@ def generate_exclude_file( exclude_out_folder: str | None, target_name: str, rsy
         if not exclude_file_path.exists():
             exclude_file_path.touch()
         
-        print(f"[*] Generating exclude file at {exclude_file_path}")
+        cinfo(f"[*] Generating exclude file at {exclude_file_path}")
         content = "\n".join(rsync.excludes) + "\n"
         with open(exclude_file_path, mode='w', encoding='utf-8') as io:
             io.write( content )
@@ -111,14 +112,14 @@ def create_cronjob( name: str, backup_conf_path: Path, schedule: Schedule, args:
     if name in registered:
         registered_job = registered[name]
         if args.verbose:
-            print(f"[*] Automation Task {name} already registered")
-            print(f"    Registry Command: {registered_job.cmd}")
-            print(f"    Registry Status : {registered_job.status.value}")
-            print(f"\n[*] Checking consistency with the crontab list")
+            cinfo(f"[*] Automation Task {name} already registered")
+            cinfo(f"    Registry Command: {registered_job.cmd}")
+            cinfo(f"    Registry Status : {registered_job.status.value}")
+            cinfo(f"\n[*] Checking consistency with the crontab list")
     else:
         if args.verbose:
-            print(f"[*] Registering for {name}")
-            print(f"    Command: {cron_command}")
+            cinfo(f"[*] Registering for {name}")
+            cinfo(f"    Command: {cron_command}")
 
     make_job_consistent(current_job, curr_crontab_list)
     registered[name] = current_job
@@ -126,7 +127,7 @@ def create_cronjob( name: str, backup_conf_path: Path, schedule: Schedule, args:
 
 def create_automation_task( name: str, backup_conf_path: Path, schedule: Schedule, args: Args ) -> None:
     """ Creates the automation task. In Linux it will install a new cronjob. """
-    print("[*] Installing the automation task")
+    cinfo("[*] Installing the automation task")
     if sys.platform == "linux":
         create_cronjob( name, backup_conf_path, schedule, args )
 
@@ -140,11 +141,11 @@ def generate_automation( target: NamedTarget, args: Args ) -> None:
     plan_conf_path = DEFAULT_PLAN_CONF_FOLDER / f"{target.name}{DEFAULT_PLAN_SUFFIX}"
 
     if args.verbose:
-        print("[*] Generated configuration plan:")
-        print(json.dumps(configuration_plan.asdict(), indent=2))
-        print()
+        cinfo("[*] Generated configuration plan:")
+        cinfo(json.dumps(configuration_plan.asdict(), indent=2))
+        cinfo("")
 
-    print(f"[*] Saving configuration plan into {plan_conf_path}")
+    cinfo(f"[*] Saving configuration plan into {plan_conf_path}")
     write_plan_configuration(plan_conf_path, configuration_plan)
 
     # Finally, creates the automation task
@@ -152,17 +153,17 @@ def generate_automation( target: NamedTarget, args: Args ) -> None:
 
 @assertion_wrapper
 def consume_backup_target( name: str, target: Target, args: Args ) -> bool:
-    print("\n" + "-" * 20 + f" TARGET: {name} " + "-" * 20)
+    cinfo("\n" + "-" * 20 + f" TARGET: {name} " + "-" * 20)
     target = NamedTarget.from_target(name, target)
 
     # First we need to validate the remaining part of the configuration
     # which does not depend on the YAML structure
-    print("[*] Further configuration checks", end="\n" if not args.verbose else ":\n")
+    cinfo("[*] Further configuration checks", end="\n" if not args.verbose else ":\n")
     validate_target( target, args )
 
     # Preprocess excludes and include, finally creates the complete exclude file
-    if args.verbose: print()
-    print("[*] Preprocessing excludes and includes path")
+    if args.verbose: cinfo("")
+    cinfo("[*] Preprocessing excludes and includes path")
     preprocess_excludes_includes( target.rsync )
 
     exclude_path = generate_exclude_file( target.rsync.exclude_output_folder, name, target.rsync )
@@ -186,9 +187,9 @@ def create_backups( conf: YAML_Conf, args: Args ) -> None:
 
         result = consume_backup_target( target_name, target, args )
         if not result:
-            print("[*] FAILED ... Skipping to the next one")
+            cerror("[*] FAILED ... Skipping to the next one")
             continue
         
         successful.append(target_name)
     
-    print("\n[*] FINISHED! Successful targets: " + ", ".join(successful))
+    cinfo("\n[*] FINISHED! Successful targets: " + ", ".join(successful))

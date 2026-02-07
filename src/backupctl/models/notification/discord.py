@@ -10,6 +10,7 @@ from datetime import datetime
 from backupctl.models.notification.notification import Event
 from backupctl.models.notification.webhook import HttpRequest, Webhook, WebhookStatus
 from backupctl.utils.dataclass import DictConfiguration, dataclass_from_dict
+from backupctl.utils.console import cwarn
 
 @dataclass
 class DiscordPayload(DictConfiguration):
@@ -101,6 +102,6 @@ class DiscordWebhook( Webhook ):
             self._pin_message( channel_id, message_id )
 
         except Exception as e:
-            print(f"Error {e}")
+            cwarn(f"Error {e}")
 
         return status

@@ -13,6 +13,7 @@ from backupctl.models.notification import NotificationCls, Event, EventType
 from backupctl.models.notification.email import EmailNotification, Emailer
 from backupctl.models.notification.webhook import WebhookNotification
 from backupctl.models.notification.wh_dispatcher import WebhookDispatcher
+from backupctl.utils.console import cinfo
 
 def make_log_file(conf: PlanCfg, suffix: str = ".log") -> Path:
     """ Create the log file into the input base folder """
@@ -140,7 +141,7 @@ def make_zip_archive( log_file_group: List[Tuple[Path, datetime]] ) -> None:
 def apply_log_retention( logging_en: bool, log_file: Path | None, retention_cfg: LogCfg ) -> None:
     """ Apply log retention policy if necessary """
     if not logging_en: return # do no perform anything if log was not enabled
-    print("[*] Applying log retention policy")
+    cinfo("[*] Applying log retention policy")
 
     log_folder_path = log_file.parent
     previous_log_files, log_archives = [], []
@@ -202,7 +203,7 @@ def run_job(
     # we need to add the corresponding option into the list of commands
     if dry_run: plan_configuration.command.insert(-2, "--dry-run")
     
-    print("[*] Running the job ...")
+    cinfo("[*] Running the job ...")
     ok, summary = run_backup_command( plan_configuration.command, file_log_path )
     apply_log_retention( logging_en, file_log_path, plan_configuration.log )
     
@@ -210,7 +211,7 @@ def run_job(
     event = Event( plan_configuration.name, event_type, summary )
 
     if notification_en:
-        print("[*] Sending notifications")
+        cinfo("[*] Sending notifications")
         notification_list = plan_configuration.notification
         send_notification(notification_list, event, file_log_path)
         return
@@ -219,8 +220,8 @@ def run_job(
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     subject = f"[Backup: {event.name}] {'OK' if event.ok() else 'FAILED'} ({now})"
     
-    print()
-    print("-" * 100)
-    print(subject)
-    print("-" * 100, end="\n\n")
-    print(event.summary)
+    cinfo("")
+    cinfo("-" * 100)
+    cinfo(subject)
+    cinfo("-" * 100, end="\n\n")
+    cinfo(event.summary)

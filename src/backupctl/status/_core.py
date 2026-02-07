@@ -3,6 +3,7 @@ from backupctl.constants import *
 from backupctl.utils.cron import *
 from typing import Optional
 from functools import partial
+from backupctl.utils.console import cerror, cinfo, csuccess
 
 def check_consistency( registry: Registry, cronlist: CronList ) -> bool:
     """ This function checks consistency between the registry
@@ -17,10 +18,10 @@ def check_consistency( registry: Registry, cronlist: CronList ) -> bool:
     if ( (registry is None) ^ (cronlist is None) ):
         if not start_print:
             start_print = True
-            print()
+            cinfo("")
 
-        print(" - (X) Registry and cronlist must both exsists or not")
-        print()
+        cerror(" - (X) Registry and cronlist must both exsists or not")
+        cinfo("")
         return False
     
     if registry is None and cronlist is None: return True
@@ -29,10 +30,10 @@ def check_consistency( registry: Registry, cronlist: CronList ) -> bool:
     if len(registry) != len(cronlist):
         if not start_print:
             start_print = True
-            print()
+            cinfo("")
 
-        print("- (X) Registry and cronlist must have the same number of jobs")
-        print()
+        cerror("- (X) Registry and cronlist must have the same number of jobs")
+        cinfo("")
         return False
 
     # Even if the number of jobs matches, we need to check that they
@@ -43,17 +44,17 @@ def check_consistency( registry: Registry, cronlist: CronList ) -> bool:
 
     if len(jobs_diff) > 0 and not start_print:
         start_print = True
-        print()
+        cinfo("")
 
     for job in jobs_diff:
         if job in registry_jobs:
-            print(f"- (X) Job {job} in REGISTRY but not into CRONLIST ")
+            cerror(f"- (X) Job {job} in REGISTRY but not into CRONLIST ")
         else:
-            if not start_print: print()
-            print(f"- (X) Job {job} in CRONLIST but not into REGISTRY ")
+            if not start_print: cinfo("")
+            cerror(f"- (X) Job {job} in CRONLIST but not into REGISTRY ")
 
     if len(jobs_diff) > 0: 
-        print()
+        cinfo("")
         return False
 
     # Once we have ensured that both registry and cronlist
@@ -63,9 +64,9 @@ def check_consistency( registry: Registry, cronlist: CronList ) -> bool:
     for job_name in registry_jobs:
         if not start_print:
             start_print = True
-            print()
+            cinfo("")
         
-        print(f"[*] Consistency check for Job {job_name.upper()}")
+        cinfo(f"[*] Consistency check for Job {job_name.upper()}")
         registry_job: Job = registry[job_name]
         cronlist_job      = cronlist[job_name]
 
@@ -77,13 +78,13 @@ def check_consistency( registry: Registry, cronlist: CronList ) -> bool:
         # job is either enabled or disabled
         if cronlist_enabled ^ registry_enabled:
             return_status = False
-            print(
+            cerror(
                 "  (X) Enabled state mismatch:"
                 f" REGISTRY={'ENABLED' if registry_enabled else 'DISABLED'},"
                 f" CRONLIST={'ENABLED' if cronlist_enabled else 'DISABLED'}"
             )
         else:
-            print(
+            csuccess(
                 f"  (✓) Enabled state OK "
                 f"({'ENABLED' if registry_enabled else 'DISABLED'})"
             )
@@ -91,13 +92,13 @@ def check_consistency( registry: Registry, cronlist: CronList ) -> bool:
         # Check for command mismatch
         if cronlist_cmd != registry_cmd:
             return_status = False
-            print("  (X) Command mismatch:")
-            print(f"     REGISTRY:  {registry_cmd}")
-            print(f"     CRONLIST:  {cronlist_cmd}")
+            cerror("  (X) Command mismatch:")
+            cerror(f"     REGISTRY:  {registry_cmd}")
+            cerror(f"     CRONLIST:  {cronlist_cmd}")
         else:
-            print("  (✓) Command OK")
+            csuccess("  (✓) Command OK")
 
-    print()
+    cinfo("")
     return return_status
 
 def make_job_consistent( job: Job, cronout: Optional[List[str]] = None ) -> None:
