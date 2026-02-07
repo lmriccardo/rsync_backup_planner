@@ -160,3 +160,55 @@ backup:
             # method of notification will be ignored
             # [OPTIONAL, default=False]
             ssl: false # or true
+
+        # Webhooks notifications. It is a list of notification setting.
+        # Each of them must defines the end-point, on which events
+        # to configure the notification, the timeout for retrying
+        # and additional (optional) authorization methods.
+        #
+        # Active possible endpoints are: Discord.
+        #
+        # [OPTIONAL]
+        webhooks:
+            # Here is the the name of the service. There can be duplicated
+            # services ( at the end each of them is assigned to a unique id )
+            # [REQUIRED, string]
+          - name: discord-on-failure
+            # The type of the webhook service endpoint. There is a
+            # limited set of available endpoints.
+            # [REQUIRED]
+            type: discord
+            # The endpoint URL of the service
+            # [REQUIRED]
+            url: https://discord.com/api/webhooks/...
+            # Subscribed Events: failure, success
+            # [OPTIONAL, default=all events]
+            events: [ failure ]
+            # Timeout for receiving the response after sending the notification.
+            # Value can be expressed in seconds (s), milliseconds (ms)
+            # and microseconds (us).
+            # [OPTIONAL, default=no timeout, wait until response arrive]
+            timeout: 5s
+            # Maximum number of retries
+            # [OPTIONAL, default=0]
+            max_retries: 2
+            # Additional headers used for the requests, such 
+            # as Authentication and Authorization tokens
+            # [OPTIONAL, default=null]
+            headers: null
+              # Authorization: Bearer ${WEBHOOK_TOKEN}
+
+          # - additional webhooks endpoints 
+      
+      # Log retention policy overwriting for the current target. It is not required 
+      # and by default log files are kept spare up to a maximum of 10 files. Once the
+      # cap has hit, 10 latest recently produced logs are compressed into a zip 
+      # archive and after 1 week removed.
+      # [ OPTIONAL ]
+      log_retention:
+        # Maximum number of spare log files
+        # [ REQUIRED, default=10 ]
+        max_spare_files: 10
+        # Retention window in days for compressed batch of files.
+        # [ REQUIRED, default=7 ]
+        retention_window: 7 # in days

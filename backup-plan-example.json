@@ -27,6 +27,17 @@
       "server": "stmp-server.domain",
       "port": 587,
       "ssl": true
+    },
+    {
+      "id": 2,
+      "type" : "webhook",
+      "webhook_type": "discord",
+      "name": "discord-on-failure",
+      "url": "https://endpoint/api/webhook",
+      "events": [ "failure" ],
+      "timeout": 12.3,
+      "headers": null,
+      "max_retries": 2
     }
   ]
 }

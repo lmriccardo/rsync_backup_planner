@@ -81,7 +81,7 @@ def _load_plan(target_name: str) -> PlanCfg:
 
 def _inspect_target(job: Job) -> InspectInfo:
     plan = _load_plan(job.name)
-    log_path = Path(plan.log)
+    log_path = Path(plan.log.path)
     schedule = _human_schedule(job.cmd)
     command = " ".join(plan.command) if isinstance(plan.command, list) else str(plan.command)
     last_run = "unknown"

@@ -84,6 +84,41 @@
       "title": "EmailCfg",
       "type": "object"
     },
+    "EventType": {
+      "enum": [
+        "success",
+        "failure"
+      ],
+      "title": "EventType",
+      "type": "string"
+    },
+    "LogRetentionCfg": {
+      "properties": {
+        "max_spare_files": {
+          "minimum": 1,
+          "title": "Max Spare Files",
+          "type": "integer"
+        },
+        "retention_window": {
+          "minimum": 1,
+          "title": "Retention Window",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_spare_files",
+        "retention_window"
+      ],
+      "title": "LogRetentionCfg",
+      "type": "object"
+    },
+    "NotifType": {
+      "enum": [
+        "discord"
+      ],
+      "title": "NotifType",
+      "type": "string"
+    },
     "NotificationCfg": {
       "properties": {
         "email": {
@@ -96,6 +131,21 @@
             }
           ],
           "default": null
+        },
+        "webhooks": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/WebhookCfg"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Webhooks"
         }
       },
       "title": "NotificationCfg",
@@ -414,6 +464,20 @@
             }
           ],
           "default": null
+        },
+        "log_retention": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LogRetentionCfg"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": {
+            "max_spare_files": 10,
+            "retention_window": 7
+          }
         }
       },
       "required": [
@@ -422,6 +486,78 @@
         "schedule"
       ],
       "title": "Target",
+      "type": "object"
+    },
+    "WebhookCfg": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/NotifType"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/EventType"
+          },
+          "minItems": 1,
+          "title": "Events",
+          "type": "array"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout"
+        },
+        "max_retries": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Retries"
+        },
+        "headers": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Headers"
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "url"
+      ],
+      "title": "WebhookCfg",
       "type": "object"
     }
   },

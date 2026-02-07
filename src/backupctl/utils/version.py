@@ -5,6 +5,7 @@ from packaging.version import Version
 from datetime import datetime
 from dataclasses import dataclass
 from typing import List, Tuple, TypeAlias
+from backupctl.utils.console import cinfo, cwarn
 
 try:
     from backupctl._version import __version__
@@ -69,16 +70,15 @@ def format_version() -> None:
     last_version_time = _get_release_time( last_version, files )
 
     # Print the current version
-    print(f"Backupctl Version {curr_version} (", end="")
-    curr_t = "Not Yet Released" if curr_version_time is None \
-        else str(curr_version_time)
-    print(f"{curr_t})")
+    cinfo(f"Backupctl Version {curr_version} (", end="")
+    curr_t = "Not Yet Released" if curr_version_time is None else str(curr_version_time)
+    cinfo(f"{curr_t})")
 
     # Print if there is a more recent version
     if curr_version < last_version:
-        print(
+        cwarn(
             "!! A new version is available - " +\
             f"{last_version} ({last_version_time}) !!"
         )
         
-    print()
+    cinfo("")

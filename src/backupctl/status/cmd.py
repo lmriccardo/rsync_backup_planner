@@ -13,27 +13,28 @@ import argparse
 
 from backupctl.models.registry import read_registry
 from ._core import *
+from backupctl.utils.console import cerror, cinfo, csuccess, cwarn
 
 def run( args: argparse.Namespace ) -> None:
     try:
-        print("[*] Starting helthcheck")
+        cinfo("[*] Starting helthcheck")
 
         # Load the registry with all jobs
         registry = read_registry()
         registry_size = 0 if registry is None else len(registry)
-        print(f"[*] Registry loaded from {REGISTERED_JOBS_FILE} ({registry_size})")
+        cinfo(f"[*] Registry loaded from {REGISTERED_JOBS_FILE} ({registry_size})")
 
         # Load the cronlist
         cronlist = read_cronlist_jobs()
         cronlist_len = 0 if cronlist is None else len(cronlist)
-        print(f"[*] Cronlist loaded ({cronlist_len})")
+        cinfo(f"[*] Cronlist loaded ({cronlist_len})")
 
         if ( check_consistency(registry, cronlist) ):
-            print("[*] Consistency Check terminated SUCCESSFULLY.")
+            csuccess("[*] Consistency Check terminated SUCCESSFULLY.")
             return
         
-        print("\n[*] Consistency Check FAILED.\n")
-        print(
+        cerror("\n[*] Consistency Check FAILED.\n")
+        cerror(
             "NOTE: By solving inconsistencies the entire registry will\n"
             "      be written into the cronlist. Non-releated cronjob\n"
             "      will be preserved, while all backupctl cronjobs  not\n"
@@ -48,9 +49,9 @@ def run( args: argparse.Namespace ) -> None:
         return 0
 
     except KeyboardInterrupt:
-        print("\n[*] CTRL+C - Exiting")
+        cwarn("\n[*] CTRL+C - Exiting")
         return 0
 
     except Exception as e:
-        print(f"[ERROR] {e}")
+        cerror(f"[ERROR] {e}")
         return 1

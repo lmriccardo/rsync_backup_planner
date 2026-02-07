@@ -2,6 +2,7 @@ import os, pwd, grp, stat
 
 from typing import NamedTuple, Optional
 from pathlib import Path
+from backupctl.utils.console import cerror, cinfo
 
 class UserStat(NamedTuple):
     """ User Id and Group Id of the user """
@@ -37,17 +38,17 @@ def get_folder_stat( path: str | Path ) -> FolderStat:
         stat.filemode(folder_stat.st_mode), folder_mode)
 
 def print_permission_error( path: Path, with_parent: bool=False ):
-    print(f"[ERORR] Permission Error when accessing/creating {path}: ")
+    cerror(f"[ERROR] Permission Error when accessing/creating {path}: ")
     f_stat = get_folder_stat( path if not with_parent else path.parent )
     u_stat = get_user_stat()
 
-    print("[ERORR] Target directory:")
-    print(f"    Path       : {f_stat.path}")
-    print(f"    Owner      : {f_stat.owner.name} (uid={f_stat.owner.uid})")
-    print(f"    Group      : {f_stat.owner.gname} (gid={f_stat.owner.gid})")
-    print(f"    Permissions: {f_stat.perms} ({f_stat.mode})")
+    cerror("[ERROR] Target directory:")
+    cinfo(f"    Path       : {f_stat.path}")
+    cinfo(f"    Owner      : {f_stat.owner.name} (uid={f_stat.owner.uid})")
+    cinfo(f"    Group      : {f_stat.owner.gname} (gid={f_stat.owner.gid})")
+    cinfo(f"    Permissions: {f_stat.perms} ({f_stat.mode})")
 
-    print()
-    print("[ERROR] Current user:")
-    print(f"    User       : {u_stat.name} (uid={u_stat.uid})")
-    print(f"    Group      : {u_stat.gname} (gid={u_stat.gid})")
+    cinfo("")
+    cerror("[ERROR] Current user:")
+    cinfo(f"    User       : {u_stat.name} (uid={u_stat.uid})")
+    cinfo(f"    Group      : {u_stat.gname} (gid={u_stat.gid})")

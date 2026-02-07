@@ -104,6 +104,17 @@ def _is_list( t: Any ) -> bool:
 def _is_union( t: Any ) -> bool:
     origin = get_origin(t)
     return origin in (Union, types.UnionType)
+
+def _needs_type_discriminator( t : Any ) -> bool:
+    """ We need a 'type' field only when there are 2+ non-None variants """
+    args = get_args(t)
+    non_none = [a for a in args if a is not types.NoneType]
+
+    # Optional[T] / T|None -> no discriminator
+    if len(non_none) <= 1: return False
+
+    # If multiple variants exist, discriminator is the safe default.
+    return True
     
 def dataclass_from_dict(cls: Type[T], data: Any, discriminator: Dict[str,Any] | None = None) -> T:
     """ Load a generic dict into a dataclass """
@@ -128,15 +139,16 @@ def dataclass_from_dict(cls: Type[T], data: Any, discriminator: Dict[str,Any] | 
     # dictionary type. If the type keyword is not found an error
     # is raised, since the program is not be able to create the data
     if _is_union(cls):
-        if isinstance(data, dict) and "type" not in data:
-            raise RuntimeError("For Union types the 'type' field must be present")
+        if isinstance(data, dict) and _needs_type_discriminator(cls):
+            if "type" not in data:
+                raise RuntimeError("For Union types the 'type' field must be present")
         
-        if isinstance(data, dict) and discriminator is not None:
-            disc_type = data["type"]
-            target_t = discriminator.get(disc_type)
-            if target_t is not None:
-                return dataclass_from_dict( target_t, data, discriminator )
-        
+            if discriminator is not None:
+                disc_type = data["type"]
+                target_t = discriminator.get(disc_type)
+                if target_t is not None:
+                    return dataclass_from_dict( target_t, data, discriminator )
+            
         # Fallback: try each branch
         last_err: Exception | None = None
         for branch_t in get_args( cls ):
