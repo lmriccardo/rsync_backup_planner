@@ -92,6 +92,26 @@
       "title": "EventType",
       "type": "string"
     },
+    "LogRetentionCfg": {
+      "properties": {
+        "max_spare_files": {
+          "minimum": 1,
+          "title": "Max Spare Files",
+          "type": "integer"
+        },
+        "retention_window": {
+          "minimum": 1,
+          "title": "Retention Window",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_spare_files",
+        "retention_window"
+      ],
+      "title": "LogRetentionCfg",
+      "type": "object"
+    },
     "NotifType": {
       "enum": [
         "discord"
@@ -444,6 +464,20 @@
             }
           ],
           "default": null
+        },
+        "log_retention": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LogRetentionCfg"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": {
+            "max_spare_files": 10,
+            "retention_window": 7
+          }
         }
       },
       "required": [

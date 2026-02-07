@@ -15,9 +15,15 @@ from backupctl.models.notification.email import EmailNotification
 from backupctl.models.notification.webhook import WebhookNotification
 
 @dataclass
+class LogCfg(DictConfiguration, PrintableConfiguration):
+    path: str # The root log folder for this job
+    max_spare_files: int # Max number of spare files before archiving them
+    retention_window: int # Max days before wiping out the least recent log archive
+
+@dataclass
 class PlanCfg(DictConfiguration, PrintableConfiguration):
     name         : str # The name of the backup plan
-    log          : str # The root log folder for this job
+    log          : LogCfg # The root log folder for this job
     compression  : bool # Enable/Disable compression
     command      : str # rsync command to run
     notification : List[NotificationCls] = \
@@ -46,7 +52,13 @@ def load_from_target( target: user_cfg.Target ) -> PlanCfg:
     based on the input notification erros mapping if provided. """
     cfg = PlanCfg( None, None, None, None )
     cfg.name = target.name
-    cfg.log = (DEFAULT_LOG_FOLDER / target.name).__str__()
+
+    cfg.log = LogCfg( 
+        (DEFAULT_LOG_FOLDER / target.name).__str__(),
+        target.log_retention.max_spare_files,
+        target.log_retention.retention_window
+    )
+    
     cfg.compression = target.rsync.options.compress
 
     # Create the rsync command

@@ -199,3 +199,16 @@ backup:
               # Authorization: Bearer ${WEBHOOK_TOKEN}
 
           # - additional webhooks endpoints 
+      
+      # Log retention policy overwriting for the current target. It is not required 
+      # and by default log files are kept spare up to a maximum of 10 files. Once the
+      # cap has hit, 10 latest recently produced logs are compressed into a zip 
+      # archive and after 1 week removed.
+      # [ OPTIONAL ]
+      log_retention:
+        # Maximum number of spare log files
+        # [ REQUIRED, default=10 ]
+        max_spare_files: 10
+        # Retention window in days for compressed batch of files.
+        # [ REQUIRED, default=7 ]
+        retention_window: 7 # in days

@@ -116,6 +116,10 @@ class NotificationCfg(BaseModel):
     email: Optional[EmailCfg] = None # Optional email notification system
     webhooks: Optional[List[WebhookCfg]] = None # Optional list of webhooks endpoints
 
+class LogRetentionCfg(BaseModel):
+    max_spare_files  : int = Field( ge=1 ) # Maximum number of spare files before being archived
+    retention_window : int = Field( ge=1 ) # Retention window in days for compressed batch of files.
+
 class Target(BaseModel):
     model_config = ConfigDict(extra="forbid")
     
@@ -123,6 +127,9 @@ class Target(BaseModel):
     rsync: RsyncCfg # rsync configuration
     schedule: Schedule # Schedule configuration
     notification: Optional[NotificationCfg]=None # The optional notification system
+    log_retention: Optional[LogRetentionCfg] = LogRetentionCfg(
+        max_spare_files=10, retention_window=7
+    )
 
 class NamedTarget(Target):
     """ Just a wrapper around target that also includes the name """
