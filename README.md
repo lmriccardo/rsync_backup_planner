@@ -1,5 +1,7 @@
 # RSync Backup/Snapshot Planner
 
+> **WARNING**: This repository will be archived and moved to a new version called [`backer`](https://github.com/lmriccardo/backer.git)
+
 **`backupctl`** is a backup/snapshot planner that relies on [`rsync`](https://linux.die.net/man/1/rsync). `rsync` is a powerful command-line utility used to efficiently synchronize and transfer files between local and remote directories. It minimizes data transfer by using delta-transfer algorithm that only copies the specific portion of files that have changed.
 
 The main goal of **`backupctl`** is to schedule a cronjob/systemd automation that creates a remote backup/snapshot of the source folders/file selected by the user, logs the `rsync` output into files and send notifications based on a defined notification system (emails, webhooks, other APIs). In the case of snapshots, retention policies can be defined. The entire configuration is provided by the user in YAML format, in according to the [plan-config-example.yml](./plan-config-example.yml) file. Other kind of usages are mostly utilities around the main goal.
